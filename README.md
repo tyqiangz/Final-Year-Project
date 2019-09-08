@@ -1,7 +1,7 @@
 # Final-Year-Project
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
-A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis in the National University of Singapore, Mathematics department.
+A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
 <br>
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
