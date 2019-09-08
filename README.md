@@ -3,7 +3,9 @@
 
 A research on optimising the QC-MDPC code for use in the McEliece cryptosystem for my Bachelor's Thesis in the NUS Math department. For the mathematical background of QC-MDPC codes, refer to the document ```MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes```.  
 
-- [x] Functions for matrix operations on QC-MDPC matrices
+- [x] Algorithms for matrix operations on circulant matrices
+- [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
+- [ ] Optimising the algorithm for counting 4 cycles
 - [ ] Bit-Flipping algorithm
 - [ ] Sum-Product algorithm
 
