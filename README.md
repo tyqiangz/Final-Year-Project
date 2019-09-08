@@ -7,6 +7,5 @@
 genFirstRow(r, wi)
 ```
 input: integers r, wi
-
 output: a numpy array of length r and Hamming weight wi
 
