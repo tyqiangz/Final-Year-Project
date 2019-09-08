@@ -1,9 +1,11 @@
 # Final-Year-Project
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
-###Functions built:
+### Functions built:
 
-```genFirstRow(r, wi)'''
+```
+genFirstRow(r, wi)
+```
 input: integers r, wi
 output: a numpy array of length r and Hamming weight wi
 
