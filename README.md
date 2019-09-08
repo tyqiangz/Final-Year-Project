@@ -5,12 +5,13 @@ A research on optimising the QC-MDPC code for use in the McEliece cryptosystem f
 
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
-- [ ] Optimising the algorithm for counting 4 cycles
+- [x] Optimising the algorithm for counting 4 cycles
 - [ ] Bit-Flipping algorithm
 - [ ] Sum-Product algorithm
 
 <br>
 
+Note: I am only working on binary QC-MDPC matrices, hence by default all input and output are to be in binary wherever neccesary.
 **Functions built:**  
 
 ```genFirstRow(r, wi)```  
