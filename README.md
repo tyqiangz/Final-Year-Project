@@ -3,8 +3,6 @@
 
 A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis in the National University of Singapore, Mathematics department.
 <br>
-For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
-
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
 - [x] Optimising the algorithm for counting 4 cycles
@@ -12,9 +10,11 @@ For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2]
 - [x] Sum-Product algorithm
 - [ ] Algorithm to assess error-correcting capability of a QC-MDPC code 
 <br>
+For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
+
 References (available in this repo):  
-[1] A Code-Based Key Agreement Scheme using QC-MDPC Codes  
-[2] MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes
+1. A Code-Based Key Agreement Scheme using QC-MDPC Codes  
+2. MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes
 <br>
 Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever neccesary.  
 
