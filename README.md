@@ -1,7 +1,7 @@
 # Final-Year-Project
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
-A research on optimising the QC-MDPC code for use in the McEliece cryptosystem for my Bachelor's Thesis in the NUS Math department
+A research on optimising the QC-MDPC code for use in the McEliece cryptosystem for my Bachelor's Thesis in the NUS Math department. For the mathematical background of QC-MDPC codes, refer to the document ```MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes```.  
 
 - [x] Functions for matrix operations on QC-MDPC matrices
 - [ ] Bit-Flipping algorithm
