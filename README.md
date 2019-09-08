@@ -1,18 +1,25 @@
 # Final-Year-Project
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
-A research on optimising the QC-MDPC code for use in the McEliece cryptosystem for my Bachelor's Thesis in the NUS Math department. For the mathematical background of QC-MDPC codes, refer to the document ```MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes```.  
+A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis in the National University of Singapore, Mathematics department.
+<br>
+For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
 
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
 - [x] Optimising the algorithm for counting 4 cycles
-- [ ] Bit-Flipping algorithm
-- [ ] Sum-Product algorithm
-
+- [x] Bit-Flipping algorithm
+- [x] Sum-Product algorithm
+- [ ] Algorithm to assess error-correcting capability of a QC-MDPC code 
 <br>
+References (available in this repo):  
+[1] A Code-Based Key Agreement Scheme using QC-MDPC Codes  
+[2] MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes
+<br>
+Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever neccesary.  
 
-Note: I am only working on binary QC-MDPC matrices, hence by default all input and output are to be in binary wherever neccesary.
-**Functions built:**  
+---  
+**API Specification:**  
 
 ```genFirstRow(r, wi)```  
 **Input**: Integers r, wi  
@@ -38,6 +45,10 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input a
 **Input**: First row of circulant matrix H  
 **Output**: First row of circulant matrix inverse of H
 
+```convertBinary(v)```  
+**Input**: integer array v  
+**Output**: integer array of v modulo 2  
+
 ```convertNumpyToSympy(f)```  
 **Input**: Numpy array containing coefficients of desired polynomial f(x) in ascending power of x  
 **Output**: Sympy polynomial f
@@ -46,9 +57,13 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input a
 **Input**: Sympy polynomial f  
 **Output**: Numpy array containing coefficients of f(x) in ascending power of x  
 
-```genParityCheck(n, r, w)```  
+```genQCMDPC(n, r, w)```  
 **Input**: Integers n (length of QC-MDPC code), r (length of each ciruclant block), w (sum of weight of all circulant blocks)  
 **Output**: (n, r, w)-QC-MDPC matrix
+
+```genGenQCMDPC(H)```  
+**Input**: Parity-check matrix H
+**Output**: The generator matrix G of H
 
 ```count4Cycles(H, n, r, w)```  
 **Input**: (n, r, w)-QC-MDPC matrix  
@@ -57,6 +72,14 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input a
 ```drawTanner(H)```  
 **Input**: Parity-check matrix H, not necessarily QC-MDPC  
 **Output**: Tanner graph of H
+
+```bitFlipping(H, c, N)```  
+**Input**: H (Parity-check matrix), c (word to be decoded), N (cutoff for the number of sum-product iterations)  
+**Output**: if decoding is successful, return the decoded word, else return 0
+
+```sumProduct(H, y, N, p)```  
+**Input**: H (Parity-check matrix), y (word to be decoded), N (cutoff for the number of sum-product iterations), p (probability of a bit being digit 0)  
+**Output**: if decoding is successful, return the decoded word, else return 0
 
 
 
