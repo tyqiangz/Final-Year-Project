@@ -25,4 +25,12 @@
 
 ```genInvPoly(firstRow)```  
 **Input**: First row of circulant matrix H  
-**Output**: First row of circulant matrix inverse of H (H^{-1})
+**Output**: First row of circulant matrix inverse of H
+
+```convertNumpyToSympy(f)```  
+**Input**: Numpy array containing coefficients of desired polynomial f(x) in ascending power of x  
+**Output**: Sympy polynomial f
+
+```convertSympyToNumpy(f)```  
+**Input**: Sympy polynomial f  
+**Output**: Numpy array containing coefficients of f(x) in ascending power of x  
