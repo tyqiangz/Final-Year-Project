@@ -3,19 +3,26 @@
 
 ### Functions built:
 
-```genFirstRow(r, wi)```
-Input: Integers r, wi  
-Output: Numpy array of length r and Hamming weight wi
+```genFirstRow(r, wi)```  
+**Input**: Integers r, wi  
+**Output**: Numpy array of length r and Hamming weight wi
 
 ```genCirculant(firstRow)```  
-Input: First row of a circulant matrix  
-Output: Circulant matrix based on the inputed first row
+**Input**: First row of a circulant matrix  
+**Output**: Circulant matrix based on the inputed first row
 
 ```genTransposePoly(firstRow)```  
-Input: First row of a circulant matrix, H  
-Output: The first row of the transpose of H
+**Input**: First row of a circulant matrix, H  
+**Output**: The first row of the transpose of H
 
 ```genSumPoly(firstRowA, firstRowB)```  
-Input: First row of circulant matrices A and B
-Output: First row of circulant matrix A+B
+**Input**: First row of circulant matrices A and B  
+**Output**: First row of circulant matrix A+B
 
+```genProdPoly(firstRowA, firstRowB)```  
+**Input**: First row of circulant matrices A and B  
+**Output**: First row of circulant matrix AB
+
+```genInvPoly(firstRow)```  
+**Input**: First row of circulant matrix H  
+**Output**: First row of circulant matrix inverse of H (H^{-1})
