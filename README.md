@@ -9,13 +9,13 @@ A research on optimising binary QC-MDPC codes for use in the McEliece cryptosyst
 - [x] Bit-Flipping algorithm
 - [x] Sum-Product algorithm
 - [ ] Algorithm to assess error-correcting capability of a QC-MDPC code 
-<br>
+
 For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
 
 References (available in this repo):  
 1. A Code-Based Key Agreement Scheme using QC-MDPC Codes  
 2. MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes
-<br>
+
 Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever neccesary.  
 
 ---  
