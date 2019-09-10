@@ -81,5 +81,20 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input v
 **Input**: H (Parity-check matrix), y (word to be decoded), N (cutoff for the number of sum-product iterations), p (probability of a bit being digit 0)  
 **Output**: if decoding is successful, return the decoded word, else return 0
 
+```genRandomVector(k, t)```  
+**Input**: k (dimension of vector), t (Hamming weight of vector)  
+**Output**: A binary array of size k with Hamming weight t.
 
+```encryptMcEliece(G, m, t)```  
+**Input**: G (Generator Matrix of a QC-MDPC matrix), m (Plaintext), t (Hamming weight of the error array to be added to m)  
+**Note**: If G is an a by b  matrix then m should be of length (b - a).  
+**Output**: Encrypted message
 
+```decryptMcEliece(H, y, method, N, p)```  
+**Input**: H (QC-MDPC matrix), y (ciphertext), method (either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.), N (max no. of decoding iterations), p (probability of bit error, only for method = 'SP')  
+**Output**: decryptedText (decrypted text of length n - r)  
+**Note**: If H is a r by n matrix then y should be of length n. decryptedText is the integer 0 if the decoding algorithm specified by ```method``` took more than N iterations. decryptedText is the integer -1 if the Sum-Product algorithm incurred computational error.
+
+```decryptSuccess(plaintext, decryptedText)```  
+**Input**: plaintext, decryptedText  
+**Output**: true if plaintext == decryptedText element-wise and have same length, false otherwise
