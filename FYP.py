@@ -84,8 +84,8 @@ def genInvPoly(firstRow):
     
     return invPoly
 
-# input: numpy array with integer values
-# output: numpy array modulo 2
+# input: integer array v 
+# output: integer array of v modulo 2
 def convertBinary(v):
     for i in range(len(v)):
         v[i] = v[i] % 2
@@ -160,7 +160,6 @@ def genGenQCMDPC(H):
 
     #compute generator polynomial of inverse of h_{n_0-1}
     invLastPoly = genInvPoly(lastPoly)
-    print(invLastPoly)
 
     #compute the first circulant block for G
     temp = genProdPoly(invLastPoly, H[0, 0:r])
@@ -249,7 +248,7 @@ def drawTanner(H):
     plt.show()
 
 # input:
-#   H: Parity-check matrix
+#   H: Parity-check matrix (not necessarily QC-MDPC)
 #   c: word to be decoded
 #   N: cutoff for number of bit-flipping iterations
 # output:
@@ -312,7 +311,7 @@ def bitFlipping(H, c, N):
     return 0
 
 # input: 
-#   H: Parity-check matrix
+#   H: Parity-check matrix (not necessarily QC-MDPC)
 #   y: word to be decoded
 #   N: cutoff for the number of sum-product iterations
 #   p: probability of a bit being digit 0
@@ -422,3 +421,94 @@ def sumProduct(H, y, N, p):
     print("Cannot decode")
     return 0
 
+# input:
+#   k: dimension of vector
+#   t: Hamming weight of vector
+# output: random vector of Hamming weight t and dimension k
+def genRandomVector(k, t):
+    randomVector = np.zeros(k, dtype = np.int32)
+
+    # pick t random positions out of k positions
+    randomPositions = np.random.choice(k, t, replace=False)
+
+    # assign the random positions the value 1
+    for j in randomPositions:
+        randomVector[j] = 1
+    
+    return randomVector
+
+# input:
+#   G: Generator Matrix
+#   m: Plaintext
+#   t: number of errors to be introduced to plaintext m
+# output:
+#   ciphertext: encrypted message
+def encryptMcEliece(G, m, t):
+    rows, cols = G.shape
+    n = cols
+    r = cols - rows
+    ciphertext = np.zeros(n, dtype = np.int32)
+
+    #generate error vector e, dimension n, Hamming weight t
+    randomError = genRandomVector(n, t)
+
+    #encryption follows research paper, ciphertext = m*G + e
+    ciphertext = np.copy(np.add(np.matmul(m, G), randomError))
+    
+    ciphertext = convertBinary(ciphertext)
+
+    #Uncomment this to check if the encryption is correct
+    #print("Plaintext : ", convertBinary(np.matmul(m, G)))
+    #print("Error     : ", randomError)
+    #print("Ciphertext: ", ciphertext)
+    
+    return ciphertext
+
+# input: 
+#   H: Parity-check matrix
+#   y: ciphertext
+#   method: either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.
+#   N: cutoff for no. of decoding iterations
+#   p: probability of error (only for method = 'SP'. If method = 'BF',
+#       it doesn't matter what value p is
+# output:
+#   decryptedText: decrypted text
+#       (decrypted text can just be an integer if decryption fails)
+#       bitFlipping return 0 if decoding fails due to exceeding max iteration
+#       SumProduct returns 0 if decoding fails due to exceeding max iteration
+#       SumProduct returns -1 if decoding fails due to E[i,j] computation error
+def decryptMcEliece(H, y, method, N, p):
+    r, n = H.shape
+
+    if (method == 'BF'):
+        #Decryption
+        decryptedText = bitFlipping(H, y, N)
+        
+        if type(decryptedText) == int:
+            print("Cannot decode by Bit-Flipping algorithm")
+        else :
+            decryptedText = decryptedText[0: n - r]
+            
+    elif (method == 'SP'):
+        #Decryption
+        decryptedText = sumProduct(H, y, N, p)
+        
+        if type(decryptedText) == int:
+            print("Cannot decode by Sum-Product algorithm")
+        else :
+            decryptedText = decryptedText[0: n - r]
+            
+    return decryptedText
+
+# input: 
+#   plaintext: the original message
+#   decryptedText: decrypted text
+# ouput: returns true if (plaintext == decryptedText) element-wise, returns false otherwise
+def decryptSuccess(plaintext, decryptedText):
+    status = np.array_equal(plaintext, decryptedText)
+    if (status == True):
+        print("Decoding success!\n")
+    else:
+        print("Decoding failure!\n")
+        
+    return status
