@@ -8,6 +8,7 @@ A research on optimising binary QC-MDPC codes for use in the McEliece cryptosyst
 - [x] Optimising the algorithm for counting 4 cycles
 - [x] Bit-Flipping algorithm
 - [x] Sum-Product algorithm
+- [x] QC-MDPC McEliece Cryptosystem
 - [ ] Algorithm to assess error-correcting capability of a QC-MDPC code 
 
 For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
