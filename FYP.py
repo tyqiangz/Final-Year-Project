@@ -128,7 +128,7 @@ def convertSympyToNumpy(f):
 # Define f_i(x) to be the Hall's polynomial of H_i
 def genQCMDPC(n, r, w):
     n0 = int(n / r)
-    wi = int(w / r)
+    wi = int(w / n0)
     
     H = np.zeros((r, r * n0), dtype = np.int32)
     H_i = np.zeros((r, r), dtype = np.int32)
@@ -197,6 +197,9 @@ def count4Cycles(H, n, r, w):
         firstRow = genSumPoly(temp3, firstRow)
 
     HHT = genCirculant(firstRow)
+    
+    print("HHT:\n", HHT)
+    
     for i in range(r-1):
         for j in range(i+1,r):
             if HHT[i, j] >= 2:
@@ -438,22 +441,18 @@ def genRandomVector(k, t):
     return randomVector
 
 # input:
-#   G: Generator Matrix
+#   G: Generator Matrix of a QC-MDPC matrix
 #   m: Plaintext
-#   t: number of errors to be introduced to plaintext m
+#   e: error vector
 # output:
 #   ciphertext: encrypted message
-def encryptMcEliece(G, m, t):
+def encryptMcEliece(G, m, e):
     rows, cols = G.shape
     n = cols
     r = cols - rows
-    ciphertext = np.zeros(n, dtype = np.int32)
-
-    #generate error vector e, dimension n, Hamming weight t
-    randomError = genRandomVector(n, t)
-
+    
     #encryption follows research paper, ciphertext = m*G + e
-    ciphertext = np.copy(np.add(np.matmul(m, G), randomError))
+    ciphertext = np.copy(np.add(np.matmul(m, G), e))
     
     ciphertext = convertBinary(ciphertext)
 
@@ -465,7 +464,7 @@ def encryptMcEliece(G, m, t):
     return ciphertext
 
 # input: 
-#   H: Parity-check matrix
+#   H: QC-MDPC matrix
 #   y: ciphertext
 #   method: either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.
 #   N: cutoff for no. of decoding iterations
@@ -507,8 +506,42 @@ def decryptMcEliece(H, y, method, N, p):
 def decryptSuccess(plaintext, decryptedText):
     status = np.array_equal(plaintext, decryptedText)
     if (status == True):
-        print("Decoding success!\n")
+        print("Decryption success!")
     else:
-        print("Decoding failure!\n")
+        print("Decryption failure!")
         
     return status
+
+# input: vector v
+# output: distance spectrum of v and distance spectrum with multiplicity of v
+def genDistSpec(v):
+    maxDist = len(v) // 2
+    distSpec = []
+    
+    vT = genTransposePoly(v)
+    temp = genProdPoly(v, vT)
+
+    #first element of temp is always w(v) ( Hamming weight of v) which is not relevant
+    #distance greater than maxDist have already been accounted for, cyclically
+    distSpecMult = temp[1: maxDist+1]
+
+    #if v is of even length, then there is double-counting for distance of length [len(v) / 2]
+    if (len(v) % 2 == 0):
+        distSpecMult[len(distSpecMult) - 1] /= 2
+
+    for i in range( len(distSpecMult) ):
+        if (distSpecMult[i] != 0):
+            distSpec.append(i+1)
+    
+    return distSpec, distSpecMult
+
+def GJSAttack():
+    M = 100
+    observed = 0
+    failed = 0
+        
+    return 0
+
+def genVecFromDist(DistSpecMult):
+    
+    return v
