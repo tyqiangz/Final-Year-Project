@@ -105,3 +105,7 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input v
 ```decryptSuccess(plaintext, decryptedText)```  
 **Input**: plaintext, decryptedText  
 **Output**: true if plaintext == decryptedText element-wise and have same length, false otherwise
+
+```genDistSpec(v)```  
+**Input**: array v  
+**Output**: distance spectrum of v and distance spectrum with multiplicity of v
