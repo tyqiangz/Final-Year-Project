@@ -2,21 +2,26 @@
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
 A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
-<br>
+<br>  
+**Currently working on**:  
+A 4 cycle occurs in the Tanner graph of H if and only if the distance spectrum of the first row of H has an element of value greater than 1. In [4], the author presents an algorithm to retrieve a vector from its distance spectrum, hence I am trying to implement the said algorithm using a random distance spectrum with elements all less than 2, to obtain a secret key that generates a Tanner graph with no 4 cycles. Also, I want to determine a way to select a valid distance spectrum, i.e. it corresponds to a vector.
+
 **Algorithms available**  
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Decoding algorithms: Bit-Flipping algorithm, Sum-Product algorithm
-- [x] Encryption and decryption algorithms of QC-MDPC McEliece Cryptosystem
+- [x] Algorithms for QC-MDPC McEliece Cryptosystem
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
-- [ ] Algorithm to assess error-correcting capability of a QC-MDPC code
+- [ ] Algorithm to assess decoding failure rate (DFR) of a QC-MDPC code
 - [ ] Timing attack algorithms
+- [ ] Vector reconstruction algorithm from a distance spectrum
 
-For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1].  
+For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1]. For attacks on the QC-MDPC McEliece cryptosystem, refer to documents [3] and [4].
 
 References (available in this repo):  
 1. A Code-Based Key Agreement Scheme using QC-MDPC Codes  
 2. MDPC-McEliece - New McEliece Variants from Moderate Density Parity-Check Codes  
 3. QC-MDPC: A Timing Attack and a CCA2 KEM
+4. A Key Recovery Attack on MDPC with CCA Security Using Decoding Errors
 
 Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever neccesary.  
 
@@ -25,7 +30,7 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input v
 
 ```genFirstRow(r, wi)```  
 **Input**: Integers r, wi  
-**Output**: Numpy array of length r and Hamming weight wi
+**Output**: Array of length r and Hamming weight wi
 
 ```genCirculant(firstRow)```  
 **Input**: First row of a circulant matrix  
@@ -64,7 +69,7 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input v
 **Output**: (n, r, w)-QC-MDPC matrix
 
 ```genGenQCMDPC(H)```  
-**Input**: Parity-check matrix H
+**Input**: Parity-check matrix H  
 **Output**: The generator matrix G of H
 
 ```count4Cycles(H, n, r, w)```  
