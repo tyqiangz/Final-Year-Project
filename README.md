@@ -6,6 +6,18 @@ A research on optimising binary QC-MDPC codes for use in the McEliece cryptosyst
 **Currently working on**:  
 A 4 cycle occurs in the Tanner graph of H if and only if the distance spectrum of the first row of H has an element of value greater than 1. In [4], the author presents an algorithm to retrieve a vector from its distance spectrum, hence I am trying to implement the said algorithm using a random distance spectrum with elements all less than 2, to obtain a secret key that generates a Tanner graph with no 4 cycles. Also, I want to determine a way to select a valid distance spectrum, i.e. it corresponds to a vector.
 
+The encryption step of the McEliece cryptosystem resembles a linear regression problem.  
+**McEliece Cryptosystem**  
+Ciphertext: y, plaintext: x, generator matrix: G, error: e. In the cryptography scenario, e is a random vector, G is known and y is known, goal is to find x, where  
+``` 
+  y = xG + e 
+```  
+**Linear Regression**  
+Design matrix X, unknown parameter vector b, error vector e, output y.  
+```
+  y = Xb + e
+```
+
 **Algorithms available**  
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Decoding algorithms: Bit-Flipping algorithm, Sum-Product algorithm
