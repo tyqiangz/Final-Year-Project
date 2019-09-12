@@ -104,10 +104,10 @@ Note: I am only working on binary QC-MDPC matrices, hence by default all input v
 **Input**: k (dimension of vector), t (Hamming weight of vector)  
 **Output**: A binary array of size k with Hamming weight t.
 
-```encryptMcEliece(G, m, t)```  
-**Input**: G (Generator Matrix of a QC-MDPC matrix), m (Plaintext), t (Hamming weight of the error array to be added to m)  
+```encryptMcEliece(G, m, e)```  
+**Input**: G (Generator Matrix of a QC-MDPC matrix), m (Plaintext), e (error vector)
 **Note**: If G is an a by b  matrix then m should be of length (b - a).  
-**Output**: Encrypted message
+**Output**: Encrypted message, a vector y = xG + e
 
 ```decryptMcEliece(H, y, method, N, p)```  
 **Input**: H (QC-MDPC matrix), y (ciphertext), method (either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.), N (max no. of decoding iterations), p (probability of bit error, only for method = 'SP')  
