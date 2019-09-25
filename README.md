@@ -4,7 +4,7 @@
 A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
 <br>  
 **Currently working on**:  
-A 4 cycle occurs in the Tanner graph of H if and only if the distance spectrum of the first row of H has an element of value greater than 1. In [4], the author presents an algorithm to retrieve a vector from its distance spectrum, hence I am trying to implement the said algorithm using a random distance spectrum with elements all less than 2, to obtain a secret key that generates a Tanner graph with no 4 cycles. Also, I want to determine a way to select a valid distance spectrum, i.e. it corresponds to a vector.
+A 4-cycle occurs in the Tanner graph of H if and only if the distance spectrum of the first row of H has an element of value greater than 1. In [4], the author presents an algorithm to retrieve a vector from its distance spectrum, hence I am trying to implement the said algorithm using a random distance spectrum with elements all less than 2, to obtain a secret key that generates a Tanner graph with no 4 cycles. I have an algorithm that can count the number of 2k cycles, for k less than the girth of the graph, I want to know if the number of 4 cycles are correlated to the decoding failure rate.
 
 **Algorithms available**  
 - [x] Algorithms for matrix operations on circulant matrices
