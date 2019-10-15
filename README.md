@@ -4,7 +4,8 @@
 A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
 <br>  
 **Currently working on**:  
-
+1. Analysing the Markov Chain used to model the bit-flipping algorithm used in the cryptosystem detail in titled "On the Decoding Failure Rate of QC-MDPC" by Nicolas Sendrier and Valentin Vasseur.
+2. Learning how the notion of trapping sets can be used to explain why certain subgraphs of the Tanner graph of a parity-check matrix adversely affects the decoding process.
 
 **Algorithms available**  
 - [x] Algorithms for matrix operations on circulant matrices
