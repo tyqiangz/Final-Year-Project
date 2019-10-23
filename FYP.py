@@ -3,9 +3,11 @@ import math
 from sympy import *
 import numpy as np
 from scipy import special
+from scipy.stats import binom
 import networkx as nx
 from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
+import random
 
 # input:
 #   r: length of first row
@@ -175,14 +177,18 @@ def genGenQCMDPC(H):
         block = genCirculant(temp2)
         block0 = np.concatenate((block0, block), axis = 0)
 
-    #concatenate identity matrix of order (n - r) and the stack of circulant matrices to form G
-    G = np.concatenate((G, block0), axis = 1)
+    if (n0 == 1):
+        return G
+    else :
+        #concatenate identity matrix of order (n - r) and the stack of circulant matrices to form G
+        G = np.concatenate((G, block0), axis = 1)
     
     return G
 
 # input: an (n,r,w)-QC-MDPC matrix, H
 # output: the number of 4 cycles in the Tanner graph of H
-def count4Cycles(H, n, r, w):
+def count4Cycles(H):
+    r, n = H.shape
     num4Cycles = 0
     firstRow = np.zeros(r, dtype = np.int32)
     temp1 = np.zeros(r, dtype = np.int32)
@@ -195,19 +201,17 @@ def count4Cycles(H, n, r, w):
         temp2 = genTransposePoly(temp1)
         temp3 = genProdPoly(temp1, temp2)
         firstRow = genSumPoly(temp3, firstRow)
-
-    HHT = genCirculant(firstRow)
     
-    print("HHT:\n", HHT)
+    print("First row of HHT:\n", firstRow)
     
-    for i in range(r-1):
-        for j in range(i+1,r):
-            if HHT[i, j] >= 2:
-                num4Cycles += special.binom(int(HHT[i, j]), 2)
+    for i in range(1,r):
+        if (firstRow[i] >= 2):
+            num4Cycles += (r-i) * special.binom(int(firstRow[i]), 2)
                 
     print("Number of 4 cycles in parity-check matrix H:", int(num4Cycles))
     
-    return num4Cycles
+    return int(num4Cycles)
+
 
 # Input: A parity-check matrix H (not necessarily QC-MDPC)
 # Output: A plot of the Tanner graph of H
@@ -402,6 +406,7 @@ def sumProduct(H, y, N, p):
                 x[j] = 0
             elif L[j] < 0:
                 x[j] = 1
+        print("L:\n", L)
         
         #Step 4: check if x is a codeword with 1 round of bit-flipping    
         checkSum = 0
@@ -535,13 +540,204 @@ def genDistSpec(v):
     
     return distSpec, distSpecMult
 
-def GJSAttack():
-    M = 100
-    observed = 0
-    failed = 0
-        
-    return 0
-
-def genVecFromDist(DistSpecMult):
+# input: code parameters n, r
+# output: the first row of an (n,r)-QCMDPC code with no 4 cycles
+# assumptions: n / r is a positive integer
+def genNo4Cycles(n, r):
+    n0 = int(n / r)
+    pos = []
+    w = []
+    error = False
+    # Hall's polynomial of resultant (n,r,w)-QC code
+    h = np.zeros(n, dtype = np.int32)
     
-    return v
+    for i in range(n0):
+        # list to keep track of the available positions for bits to placed
+        pos.append([i for i in range(r)])
+        # list to keep track of the weight of each circulant block
+        w.append(0)
+
+        # pick a position in each block
+        randPos = random.choice(pos[i])
+        h[randPos + i * r] = 1
+        pos[i].remove(randPos)
+        w[i] += 1
+
+    print("w:", w)
+        
+    while(True):
+        h_prev = np.copy(h)
+        for i in range(n0):
+            # will add 2 bits at once to ensure in each block has odd weight
+            for j in range(2):
+                randPos = random.choice(pos[i])
+                h[randPos + i * r] = 1
+                pos[i].remove(randPos)
+                w[i] += 1
+            print("w:", w)
+            # check if the QC-code has 4-cycles
+            H = genCirculant(h)
+            if (count4Cycles(H) > 0):
+                w[i] -=2
+                return h, sum(w)
+
+# input: code parameters n, r, w
+# output: the first row of an (n,r,w)-QCMDPC code with no 4 cycles
+#           if such a code is attainable in 100 random trials, else return False
+# assumptions: w must be odd
+def genQCNo4(n,r,w):
+    for i in range(100):
+        h, weight = genNo4Cycles(n,r)
+        if (weight >= w):
+            break
+
+    if (weight < w):
+        print("(n,r,w)-QC-code without 4 cycles is not obtainable in 100 trials.")
+        return 0
+    
+    return h
+# input:
+#   H: (n,r,w)-QCMDPC matrix
+#   G: generator matrix of H
+#   method: 'BF' or 'SP'
+#   N: number of decoding iterations
+#   p: probability of success
+#output: the number of errors the decoding method can correct using H
+def decodeMax(H, G, method, N, p):
+    r, n = H.shape
+    d = r // 2
+    t = 0
+    decryptedText = []
+
+    while (True):
+        # generate a random message m of weight d
+        m = genRandomVector(r, d)
+
+        # generate a random error vector e of weight t
+        e = genRandomVector(n, t)
+
+        # encrypt the message m
+        y = encryptMcEliece(G, m, e)
+
+        # decrypt the ciphertext
+        decryptedText = decryptMcEliece(H, y, method, N, p)
+        
+        if (type(decryptedText) == int):
+            print(method, "can correct", t-1, "errors")
+            return t
+        else:
+            print(method, "can correct", t, "errors")
+        t += 1
+        
+def XBar(S,t,n,w):
+    numer = 0
+    denom = 0
+
+    for i in range(1, t+1, 2):
+        rho = rhoL(n, w, t, i)
+        numer += (i - 1) * rho
+        denom += rho
+ 
+    return S * numer / denom
+
+def rhoL(n, w, t, ell):
+    return special.binom(w, ell) * special.binom(n - w, t - ell) / special.binom(n, t)
+    
+def counterDist(S, XBar, n, w, d, t):
+    pi1prime = (S + XBar) / (d * t)
+    pi0prime = ((w - 1) * S - XBar) / (d * (n - t))
+
+    return pi1prime, pi0prime
+    
+def threshold(d, pi1prime, pi0prime, n, t):
+    '''
+    Input: d, pi1prime, pi0prime, n, t
+    Output: Threhold required for SBSBF
+    '''
+    T = 0
+    while(t * binom.pmf(k=T, n=d, p=pi1prime) <
+          (n - t) * binom.pmf(k=T, n=d, p=pi0prime)):
+        T += 1
+        
+    return T
+
+def sampling(H, y):
+    s = convertBinary(np.matmul(H, y))
+    print("s:", s)
+    # extract nonzero entries of s
+    unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
+    # pick a random unsatisfied eqn
+    i = random.choice(unsatEqn)
+
+    print("i:",i)
+    
+    # extract nonzero entries of ith row of H
+    ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
+    # pick a random index of nonzero entry of ith row of H
+    j = random.choice(ones)
+
+    return j
+
+def SBSBF(H, y, w, t):
+    '''
+    Step-by-Step Bit Flipping algorithm
+    Input: Parity-check matrix H, ciphertext y
+    output: decrypted text y'
+    '''
+    r, n = H.shape
+    d = w / 2
+
+    print(np.transpose(H).shape)
+    print((y[np.newaxis, :]).shape)
+    s = np.matmul(y, np.transpose(H))
+    print("s:", s)
+    s = convertBinary(s)
+    print("s:", s)
+    
+    while (np.count_nonzero(s) > 0):
+        # syndrome weight
+        S = sum(s==1)
+        print("S:", S)
+            
+        X_bar = XBar(S,t,n,w)
+        pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
+        tau = threshold(d, pi1prime, pi0prime, n, t)
+        tau = (d + 1) / (2 * d)
+        j = sampling(H, y)
+
+        print("j:", j)
+        print("unsatified pc eqn involving j bit:", np.matmul(s, H[:,j]))
+        if (np.matmul(s, H[:,j]) > tau * d):
+            y[j] = y[j] ^ 1
+
+        # syndrome
+        s = np.matmul(y, np.transpose(H))
+        s = convertBinary(s)
+
+        print("syndrome:", s)
+
+    print("Decrypted text:", y)        
+    return y
+
+def transProb(n, d, t, w, S, pi1prime, pi0prime, sigma, T):
+    i = 0
+    p_sigma_neg = t * sigma * binom.pmf(sigma, d, pi1prime) / (w * S)
+    p_sigma_pos = (n - t) * sigma * binom.pmf(sigma, d, pi0prime) / (w * S)
+    
+    while(i < T):
+        p += t * i * binom.pmf(i, d, pi1prime) / (w * S)
+        p += (n - t) * i * binom.pmf(i, d, pi0prime) / (w * S)
+
+    return p_sigma_neg, p_sigma_pos, p
+
+def newTransProb(d, pi1prime, pi0prime, p_sigma_neg, p_sigma_pos, p, T):
+    pL = 0
+    prob1 = 0
+    prob2 = 0
+
+    for i in range(T):
+        prob1 += binom.pmf(i, d, pi1prime)
+        prob2 += binom.pmf(i, d, pi0prime)
+
+    pL = (prob1 ** t) * (prob2 ** (n - t))
+    return p_sigma_neg * (1 - pL) / (1 - p), p_sigma_pos * (1 - pL) / (1 - p), pL
