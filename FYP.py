@@ -406,7 +406,7 @@ def sumProduct(H, y, N, p):
                 x[j] = 0
             elif L[j] < 0:
                 x[j] = 1
-        print("L:\n", L)
+        #print("L:\n", L)
         
         #Step 4: check if x is a codeword with 1 round of bit-flipping    
         checkSum = 0
@@ -658,7 +658,9 @@ def threshold(d, pi1prime, pi0prime, n, t):
     while(t * binom.pmf(k=T, n=d, p=pi1prime) <
           (n - t) * binom.pmf(k=T, n=d, p=pi0prime)):
         T += 1
-        
+
+    print("Threshold:", T)
+    
     return T
 
 def sampling(H, y):
@@ -668,8 +670,6 @@ def sampling(H, y):
     unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
     # pick a random unsatisfied eqn
     i = random.choice(unsatEqn)
-
-    print("i:",i)
     
     # extract nonzero entries of ith row of H
     ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
@@ -678,35 +678,33 @@ def sampling(H, y):
 
     return j
 
-def SBSBF(H, y, w, t):
+def SBSBF(H, y, w, t, N):
     '''
     Step-by-Step Bit Flipping algorithm
-    Input: Parity-check matrix H, ciphertext y
+    Input: Parity-check matrix H, ciphertext y, weight of each parity-check eqn w,
+    number of errors t, number of iterations N
     output: decrypted text y'
     '''
     r, n = H.shape
     d = w / 2
+    iteration = 1
 
-    print(np.transpose(H).shape)
-    print((y[np.newaxis, :]).shape)
     s = np.matmul(y, np.transpose(H))
-    print("s:", s)
     s = convertBinary(s)
-    print("s:", s)
     
-    while (np.count_nonzero(s) > 0):
+    while (np.count_nonzero(s) > 0 and iteration <= N):
+        print("Iteration:", iteration)
+        iteration += 1
         # syndrome weight
         S = sum(s==1)
-        print("S:", S)
             
         X_bar = XBar(S,t,n,w)
         pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
         tau = threshold(d, pi1prime, pi0prime, n, t)
-        tau = (d + 1) / (2 * d)
+        return 0
+        #tau = (d + 1) / (2 * d)
         j = sampling(H, y)
 
-        print("j:", j)
-        print("unsatified pc eqn involving j bit:", np.matmul(s, H[:,j]))
         if (np.matmul(s, H[:,j]) > tau * d):
             y[j] = y[j] ^ 1
 
@@ -714,10 +712,8 @@ def SBSBF(H, y, w, t):
         s = np.matmul(y, np.transpose(H))
         s = convertBinary(s)
 
-        print("syndrome:", s)
-
     print("Decrypted text:", y)        
-    return y
+    return y[0: n-r]
 
 def transProb(n, d, t, w, S, pi1prime, pi0prime, sigma, T):
     i = 0
