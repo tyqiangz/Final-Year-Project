@@ -628,40 +628,6 @@ def decodeMax(H, G, method, N, p):
         else:
             print(method, "can correct", t, "errors")
         t += 1
-        
-def XBar(S,t,n,w):
-    numer = 0
-    denom = 0
-
-    for i in range(1, t+1, 2):
-        rho = rhoL(n, w, t, i)
-        numer += (i - 1) * rho
-        denom += rho
- 
-    return S * numer / denom
-
-def rhoL(n, w, t, ell):
-    return special.binom(w, ell) * special.binom(n - w, t - ell) / special.binom(n, t)
-    
-def counterDist(S, XBar, n, w, d, t):
-    pi1prime = (S + XBar) / (d * t)
-    pi0prime = ((w - 1) * S - XBar) / (d * (n - t))
-
-    return pi1prime, pi0prime
-    
-def threshold(d, pi1prime, pi0prime, n, t):
-    '''
-    Input: d, pi1prime, pi0prime, n, t
-    Output: Threhold required for SBSBF
-    '''
-    T = 0
-    while(t * binom.pmf(k=T, n=d, p=pi1prime) <
-          (n - t) * binom.pmf(k=T, n=d, p=pi0prime)):
-        T += 1
-
-    print("Threshold:", T)
-    
-    return T
 
 def sampling(H, y):
     s = convertBinary(np.matmul(H, y))
@@ -686,7 +652,7 @@ def SBSBF(H, y, w, t, N):
     output: decrypted text y'
     '''
     r, n = H.shape
-    d = w / 2
+    d = w // 2
     iteration = 1
 
     s = np.matmul(y, np.transpose(H))
@@ -715,18 +681,82 @@ def SBSBF(H, y, w, t, N):
     print("Decrypted text:", y)        
     return y[0: n-r]
 
-def transProb(n, d, t, w, S, pi1prime, pi0prime, sigma, T):
-    i = 0
+#################### Markov Chain Monte Carlo Simulation Algorithms ####################
+
+def XBar(S,t,n,w):
+    numer = 0
+    denom = 0
+
+    for i in range(1, t+1, 2):
+        rho = rhoL(n, w, t, i)
+        numer += (i - 1) * rho
+        denom += rho
+ 
+    return S * numer / denom
+
+def rhoL(n, w, t, ell):
+    return special.binom(w, ell) * special.binom(n - w, t - ell) / special.binom(n, t)
+
+def rhoBar(n, w, t):
+    sum = 0
+    for ell in range(1,t+1,2):
+        sum += rhoL(n,w,t,ell)
+    return sum
+        
+def g_0(n, w, t, rhobar, k):
+    if (k % 2 == 1):
+        return 0
+    else:
+        return rhoL(n, w, t, k) / (1- rhobar)
+
+def g_1(n, w, t, rhobar, k):
+    if (k % 2 == 0):
+        return 0
+    else:
+        return rhoL(n, w, t, k) / rhobar
+
+def convolveH(n, w, t, rhobar, ell):
+    G0 = [g_1(n, w, t, rhobar, i) for i in range(w+1)]
+    G1 = [g_1(n, w, t, rhobar, i) for i in range(w+1)]
+
+    
+    
+def counterDist(S, XBar, n, w, d, t):
+    pi1prime = (S + XBar) / (d * t)
+    pi0prime = ((w - 1) * S - XBar) / (d * (n - t))
+
+    return pi1prime, pi0prime
+    
+def threshold(d, pi1prime, pi0prime, n, t):
+    '''
+    Input: d, pi1prime, pi0prime, n, t
+    Output: Threhold required for SBSBF
+    '''
+    T = 0
+    while(t * binom.pmf(k=T, n=d, p=pi1prime) <
+          (n - t) * binom.pmf(k=T, n=d, p=pi0prime)):
+        T += 1
+
+    print("Threshold:", T)
+    
+    return T
+
+def p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma):
     p_sigma_neg = t * sigma * binom.pmf(sigma, d, pi1prime) / (w * S)
     p_sigma_pos = (n - t) * sigma * binom.pmf(sigma, d, pi0prime) / (w * S)
-    
-    while(i < T):
-        p += t * i * binom.pmf(i, d, pi1prime) / (w * S)
-        p += (n - t) * i * binom.pmf(i, d, pi0prime) / (w * S)
 
-    return p_sigma_neg, p_sigma_pos, p
+    return p_sigma_neg, p_sigma_pos
 
-def newTransProb(d, pi1prime, pi0prime, p_sigma_neg, p_sigma_pos, p, T):
+def calcP(T, n, d, t, w, S, pi1prime, pi0prime):
+    p = 0
+    for i in range(0,T):
+        sigma = i
+        p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+        p += p_sigma_neg + p_sigma_pos
+
+    return p
+
+def pL(d, pi1prime, pi0prime, p, T, t, n):
     pL = 0
     prob1 = 0
     prob2 = 0
@@ -736,4 +766,90 @@ def newTransProb(d, pi1prime, pi0prime, p_sigma_neg, p_sigma_pos, p, T):
         prob2 += binom.pmf(i, d, pi0prime)
 
     pL = (prob1 ** t) * (prob2 ** (n - t))
-    return p_sigma_neg * (1 - pL) / (1 - p), p_sigma_pos * (1 - pL) / (1 - p), pL
+    return pL
+
+def p_sigmas_prime(p_sigma_neg, p_sigma_pos, pL, p):
+    return p_sigma_neg * (1 - pL) / (1 - p), p_sigma_pos * (1 - pL) / (1 - p)
+
+def DFR(n, w, t, trials):
+    d = w // 2
+    r = n // 2
+    fail = 0
+    initial_t = t
+    
+    rho_bar = rhoBar(n, w, t)
+    print("rhoBar:", rho_bar)
+        
+    for i in range(trials):
+        print("################### Trial number %d ############" % (i+1))
+        
+        # select initial syndrome weight S from Binomial(r, rhoL)
+        S = int(np.random.binomial(r, rho_bar, 1))
+        state = [S, initial_t]
+
+        print("Initial State:", state)
+
+        while (state[1] > 0):
+            p_sigma_list = []
+            sigma_list = []
+            S = state[0]
+            t = state[1]
+            
+            X_bar = XBar(S,t,n,w)
+            pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
+            print("S = %d, t= %d" % (S,t))
+            print("X_bar = %f, pi1prime = %f, pi0prime = %f" % (X_bar, pi1prime, pi0prime))
+
+            # probabilities pi0prime and pi1prime can exceed 1
+            if (pi1prime > 1):
+                pi1prime = 0.999
+            if (pi0prime > 1):
+                pi0prime = 0.999
+
+            print("X_bar = %f, pi1prime = %f, pi0prime = %f" % (X_bar, pi1prime, pi0prime))
+            
+            T = threshold(d, pi1prime, pi0prime, n, t)
+
+            p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
+            PL = pL(d, pi1prime, pi0prime, p, T, t, n)
+
+            # generate the p_sigma_prime and prepare a list for random weighted number generation
+            for sigma in range(T, d+1):
+                p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+                p_sigma_pos_prime, p_sigma_neg_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
+                
+                p_sigma_list += [p_sigma_pos_prime, p_sigma_neg_prime]
+                sigma_list += [str(sigma) + '+', str(sigma) + '-']
+
+            print("pL = ", PL)
+            probabilities = p_sigma_list
+            
+            if (PL != 0):
+                probabilities = p_sigma_list + [PL]
+                sigma_list += ['L']
+
+            print("\n")
+            print("probabilities:", probabilities)
+            print("Total probability:", sum(probabilities))
+            print("sigma_list:", sigma_list)
+            
+            # randomly select a transition step
+            nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)
+            nextSigma = nextSigma[0]
+            print("Next selected state:", nextSigma)
+
+            if (nextSigma == 'L'):
+                fail += 1
+                break
+            elif (nextSigma[-1] == '+'):
+                state[0] += d - 2 * int(nextSigma[:-1])
+                state[1] += 1                
+            elif (nextSigma[-1] == '-'):
+                state[0] += d - 2 * int(nextSigma[:-1])
+                state[1] -= 1
+
+            print("State:", state)
+            print("\n")
+            
+    return fail / trials
+        
