@@ -29,7 +29,7 @@ H = genQCMDPC(n, r, w)
 G = genGenQCMDPC(H)
 
 # count the number of 4 cycles in the Tanner graph of H
-count4Cycles(H, n, r, w)
+count4Cycles(H)
 
 # generate the distance spectrum of h (first row of H)
 a, b = genDistSpec(H[0, :])
