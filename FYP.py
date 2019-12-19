@@ -628,12 +628,13 @@ def decodeMax(H, G, method, N, p):
         else:
             print(method, "can correct", t, "errors")
         t += 1
-
+########################## Step-By-Step Bit-Flipping Decoder ##########################
 def sampling(H, y):
-    s = convertBinary(np.matmul(H, y))
+    s = convertBinary(np.matmul(y, np.transpose(H)))
     print("s:", s)
     # extract nonzero entries of s
     unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
+    
     # pick a random unsatisfied eqn
     i = random.choice(unsatEqn)
     
@@ -641,45 +642,66 @@ def sampling(H, y):
     ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
     # pick a random index of nonzero entry of ith row of H
     j = random.choice(ones)
-
+    
     return j
 
-def SBSBF(H, y, w, t, N):
+def SBSBF(H, y, w, t, N, codeword):
     '''
     Step-by-Step Bit Flipping algorithm
     Input: Parity-check matrix H, ciphertext y, weight of each parity-check eqn w,
     number of errors t, number of iterations N
     output: decrypted text y'
     '''
+    print("Starting Step-by-Step Bit-Flipping Algorithm...")
+    
     r, n = H.shape
     d = w // 2
     iteration = 1
+    flipped = 1
 
-    s = np.matmul(y, np.transpose(H))
-    s = convertBinary(s)
+    s = convertBinary(np.matmul(y, np.transpose(H)))
     
-    while (np.count_nonzero(s) > 0 and iteration <= N):
-        print("Iteration:", iteration)
+    while (np.count_nonzero(s) > 0 and iteration <= N and flipped == 1):
+        flipped = 0
         iteration += 1
         # syndrome weight
         S = sum(s==1)
-            
+
+        t = sum( convertBinary(np.array(codeword) + np.array(y)) == 1)
         X_bar = XBar(S,t,n,w)
         pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
-        tau = threshold(d, pi1prime, pi0prime, n, t)
-        return 0
-        #tau = (d + 1) / (2 * d)
-        j = sampling(H, y)
 
-        if (np.matmul(s, H[:,j]) > tau * d):
+        if (pi1prime >= 1):
+            pi1prime = 0.999
+        if (pi0prime >= 1):
+            pi0prime = 0.999
+            
+        T = threshold(d, pi1prime, pi0prime, n, t)
+
+        # compute all the sigma_j for all j = 0, 1, ..., n-1
+        sigmaJ = np.matmul(s, H)
+        toFlip = []
+        
+        for k in range(n):
+            if (sigmaJ[k] >= T):
+                toFlip += [k]
+
+        if (len(toFlip) > 0):
+            j = random.choice(toFlip)
             y[j] = y[j] ^ 1
-
+            flipped = 1
+            
         # syndrome
         s = np.matmul(y, np.transpose(H))
         s = convertBinary(s)
 
-    print("Decrypted text:", y)        
-    return y[0: n-r]
+    print("Decrypted text:\n", y)
+    print("Codeword:\n", codeword)
+    if (sum(s == 1) == 0):
+        return y[0: n-r]
+    else:
+        print("Cannot decode")
+        return 0
 
 #################### Markov Chain Monte Carlo Simulation Algorithms ####################
 
@@ -730,14 +752,11 @@ def counterDist(S, XBar, n, w, d, t):
 def threshold(d, pi1prime, pi0prime, n, t):
     '''
     Input: d, pi1prime, pi0prime, n, t
-    Output: Threhold required for SBSBF
+    Output: Threshold required for SBSBF
     '''
-    T = 0
-    while(t * binom.pmf(k=T, n=d, p=pi1prime) <
-          (n - t) * binom.pmf(k=T, n=d, p=pi0prime)):
-        T += 1
-
-    print("Threshold:", T)
+    numer = math.log((n - t) / t) + d * math.log((1 - pi0prime) / (1 - pi1prime))
+    denom = math.log(pi1prime / pi0prime) + math.log((1 - pi0prime) / (1 - pi1prime))
+    T = math.ceil(numer / denom)
     
     return T
 
@@ -834,8 +853,7 @@ def DFR(n, w, t, trials):
             print("sigma_list:", sigma_list)
             
             # randomly select a transition step
-            nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)
-            nextSigma = nextSigma[0]
+            nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)[0]
             print("Next selected state:", nextSigma)
 
             if (nextSigma == 'L'):
