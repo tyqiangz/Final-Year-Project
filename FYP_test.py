@@ -50,3 +50,12 @@ decryptedText = decryptMcEliece(H, y, method, N, p)
 
 # check if decryption is correct
 decryptSuccess(m, decryptedText)
+
+print("############ SBSBF ################")
+N = 50
+codeword = convertBinary(np.array(y) + np.array(e))
+# decrypt the ciphertext using Step-by-Step decoder
+decryptedText = SBSBF(H, y, w, t, N, codeword)
+
+# check if decryption is correct
+decryptSuccess(m, decryptedText)
