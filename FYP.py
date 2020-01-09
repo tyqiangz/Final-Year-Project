@@ -599,7 +599,7 @@ def genQCNo4(n,r,w):
 # input:
 #   H: (n,r,w)-QCMDPC matrix
 #   G: generator matrix of H
-#   method: 'BF' or 'SP'
+#   method: 'BF' or 'SP' or  'SBSBF'
 #   N: number of decoding iterations
 #   p: probability of success
 #output: the number of errors the decoding method can correct using H
@@ -629,21 +629,52 @@ def decodeMax(H, G, method, N, p):
             print(method, "can correct", t, "errors")
         t += 1
 ########################## Step-By-Step Bit-Flipping Decoder ##########################
-def sampling(H, y):
-    s = convertBinary(np.matmul(y, np.transpose(H)))
-    print("s:", s)
-    # extract nonzero entries of s
-    unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
-    
-    # pick a random unsatisfied eqn
-    i = random.choice(unsatEqn)
-    
-    # extract nonzero entries of ith row of H
-    ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
-    # pick a random index of nonzero entry of ith row of H
-    j = random.choice(ones)
-    
-    return j
+
+# input: parity-check matrix H, syndrome s
+# method 1: random selection amongst j where sigma_j >= T
+# method 2: random select an unsatisfied eqn, then select a nonzero bit of that eqn
+# method 3: return argmax_j sigma_j
+# output: a bit j such that sigma_j >= T, else return 'F'
+def sampling(H, s, method):
+    if (method == 1):
+        # compute all the sigma_j for all j = 0, 1, ..., n-1
+        sigmaJ = np.matmul(s, H)
+        
+        # if sigma_j >= threshold T, then add to a list of bits to be flipped
+        toFlip = []
+        for k in range(n):
+            if (sigmaJ[k] >= T):
+                toFlip += [k]
+
+        # randomly pick a bit to flip if it exists
+        if (len(toFlip) > 0):
+            return random.choice(toFlip)
+        else:
+            return 'F'
+
+    if (method == 2):
+        # extract nonzero entries of s
+        unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
+        
+        # pick a random unsatisfied eqn
+        i = random.choice(unsatEqn)
+        
+        # extract nonzero entries of ith row of H
+        ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
+        # pick a random index of nonzero entry of ith row of H
+        return random.choice(ones)
+
+    if (method == 3):
+        # compute all the sigma_j for all j = 0, 1, ..., n-1
+        sigmaJ = np.matmul(s, H)
+        j = np.argmax(sigmaJ)
+        maxIndices = []
+        for i in range(len(sigmaJ)):
+            if (sigmaJ[i] == sigmaJ[j]):
+                maxIndices += [i]
+
+        return random.choice(maxIndices)
+        
 
 def SBSBF(H, y, w, t, N, codeword):
     '''
@@ -670,26 +701,15 @@ def SBSBF(H, y, w, t, N, codeword):
         t = sum( convertBinary(np.array(codeword) + np.array(y)) == 1)
         X_bar = XBar(S,t,n,w)
         pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
-
-        if (pi1prime >= 1):
-            pi1prime = 0.999
-        if (pi0prime >= 1):
-            pi0prime = 0.999
             
         T = threshold(d, pi1prime, pi0prime, n, t)
 
-        # compute all the sigma_j for all j = 0, 1, ..., n-1
-        sigmaJ = np.matmul(s, H)
-        toFlip = []
-        
         for k in range(n):
-            if (sigmaJ[k] >= T):
-                toFlip += [k]
-
-        if (len(toFlip) > 0):
-            j = random.choice(toFlip)
-            y[j] = y[j] ^ 1
-            flipped = 1
+            j = sampling(H, s, method = 2)
+            if ( sum((s + H[:, j]) == 2) >= T ):
+                y[j] = y[j] ^ 1
+                flipped = 1
+                break
             
         # syndrome
         s = np.matmul(y, np.transpose(H))
@@ -703,6 +723,47 @@ def SBSBF(H, y, w, t, N, codeword):
         print("Cannot decode")
         return 0
 
+def DFR_Exp(H, G, w, t, N, trials, method):
+    '''
+    H: parity-check matrix
+    G: generator matrix
+    w: row-weight of H
+    t: number of errors
+    N: max no. of iterations for decoder
+    trials: no. of decoding trials
+    method: decoding method 'BF' or 'SP' or 'SBSBF'
+    '''
+    r, n = H.shape
+    d = w // 2
+
+    DFR = 0
+    
+    for k in range(trials):
+        print("Trial ", k)
+        # generate a random message m of weight between 1 and r
+        m = genRandomVector(r, random.randint(1, r))
+
+        # generate a random error vector e of weight t
+        e = genRandomVector(n, t)
+
+        # encrypt the message m
+        y = encryptMcEliece(G, m, e)
+
+        codeword = convertBinary(np.array(y) + np.array(e))
+
+        if (method == 'SBSBF'):
+            # decrypt the ciphertext
+            decryptedText = SBSBF(H, y, w, t, N, codeword)
+
+        # check if decryption is correct
+        status = decryptSuccess(m, decryptedText)
+
+        if (status == False):
+            DFR += 1
+
+    print("Failed:", DFR, "Trials", trials, "DFR:", DFR / trials)
+
+    return(DFR / trials)
 #################### Markov Chain Monte Carlo Simulation Algorithms ####################
 
 def XBar(S,t,n,w):
@@ -720,10 +781,10 @@ def rhoL(n, w, t, ell):
     return special.binom(w, ell) * special.binom(n - w, t - ell) / special.binom(n, t)
 
 def rhoBar(n, w, t):
-    sum = 0
+    temp = 0
     for ell in range(1,t+1,2):
-        sum += rhoL(n,w,t,ell)
-    return sum
+        temp += rhoL(n,w,t,ell)
+    return temp
         
 def g_0(n, w, t, rhobar, k):
     if (k % 2 == 1):
@@ -737,11 +798,58 @@ def g_1(n, w, t, rhobar, k):
     else:
         return rhoL(n, w, t, k) / rhobar
 
-def convolveH(n, w, t, rhobar, ell):
-    G0 = [g_1(n, w, t, rhobar, i) for i in range(w+1)]
+# return h(l) for l = 0,1,...,r
+def convolveH(n, w, t, rhobar):
+    d = w // 2
+    r = n // 2
+
+    G0 = [g_0(n, w, t, rhobar, i) for i in range(w+1)]
     G1 = [g_1(n, w, t, rhobar, i) for i in range(w+1)]
 
+    G0conv = [[1]]
+    G1conv = [[1]]
+
+    for i in range(r):
+        G0conv += [np.convolve(G0conv[i], G0)]
+        G1conv += [np.convolve(G1conv[i], G1)]
+
+    # h(0) = g_0^{*r}(d * t)
+    h = [G0conv[r][d * t]]
+
+    # compute h(ell) for ell = 1, ..., r-1
+    for i in range(1, r):
+        temp = 0
+        j = 0
+        while (j >= 0 and j < len(G1conv[i]) and d * t - j >=0 and
+               d * t - j < len(G0conv[r - i])):
+            temp += G1conv[i][j] * G0conv[r - i][d * t - j]
+            j += 1
+        h += [temp]
+        
+    # h(r) = g_1^{*r}(d * t)
+    h += [ G1conv[r][d * t] ]
+
+    return h
+
+# return a list of Pr(S = ell | H is regular) for ell = 0,1,...,r
+def syndromeDist(n, w, t, rhobar):
+    r = n // 2
+    d = w // 2
+
+    # if t = 1, Pr(S = d | H is regular) = 1 and 0 elsewhere 
+    if (t == 1):
+        return [0 for i in range(d)] + [1] + [0 for i in range(r - d)]
     
+    h = convolveH(n, w, t, rhobar)
+    sDist = []
+
+    for ell in range(r+1):
+        denom = 0
+        for k in range(r):
+            denom += binom.pmf(k, r, rhobar) * h[k]
+        sDist += [binom.pmf(ell, r, rhobar) * h[ell] / denom]
+
+    return sDist
     
 def counterDist(S, XBar, n, w, d, t):
     pi1prime = (S + XBar) / (d * t)
@@ -754,11 +862,23 @@ def threshold(d, pi1prime, pi0prime, n, t):
     Input: d, pi1prime, pi0prime, n, t
     Output: Threshold required for SBSBF
     '''
+    if (pi1prime > 1):
+        pi1prime = 1
+        
+    if (pi1prime < 0 or pi0prime > 1 or pi0prime < 0):
+        print("Probabilities must be within 0 and 1")
+        print("pi1prime: %f, pi0prime: %f" % (pi1prime, pi0prime))
+        return 'F'
+    
+    if (pi1prime == 1):
+        if ( t >= (n-t) * (pi0prime ** d) ):
+            return d
+        else:
+            return 'F'
+        
     numer = math.log((n - t) / t) + d * math.log((1 - pi0prime) / (1 - pi1prime))
     denom = math.log(pi1prime / pi0prime) + math.log((1 - pi0prime) / (1 - pi1prime))
-    T = math.ceil(numer / denom)
-    
-    return T
+    return math.ceil(numer / denom)
 
 def p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma):
     p_sigma_neg = t * sigma * binom.pmf(sigma, d, pi1prime) / (w * S)
@@ -768,7 +888,7 @@ def p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma):
 
 def calcP(T, n, d, t, w, S, pi1prime, pi0prime):
     p = 0
-    for i in range(0,T):
+    for i in range(T):
         sigma = i
         p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
         p += p_sigma_neg + p_sigma_pos
@@ -776,7 +896,6 @@ def calcP(T, n, d, t, w, S, pi1prime, pi0prime):
     return p
 
 def pL(d, pi1prime, pi0prime, p, T, t, n):
-    pL = 0
     prob1 = 0
     prob2 = 0
 
@@ -790,84 +909,261 @@ def pL(d, pi1prime, pi0prime, p, T, t, n):
 def p_sigmas_prime(p_sigma_neg, p_sigma_pos, pL, p):
     return p_sigma_neg * (1 - pL) / (1 - p), p_sigma_pos * (1 - pL) / (1 - p)
 
-def DFR(n, w, t, trials):
+# input: codelength: n, weight of 1 parity-check eqn: w, number of errors: t,
+# distribution of initial syndrome weight by Proposition 3: prob,
+# : rho_bar
+# ouput: this algorithm performs the Markov Chain Monte Carlo Simulation of one set of
+# parameters (n,w,t) and returns success: 'S' or failure: 'F' or no threshold: 'N'
+# or Others: 'O'
+def MCMC(n, w, t, prob, rho_bar):
     d = w // 2
     r = n // 2
     fail = 0
     initial_t = t
     
-    rho_bar = rhoBar(n, w, t)
-    print("rhoBar:", rho_bar)
-        
-    for i in range(trials):
-        print("################### Trial number %d ############" % (i+1))
-        
-        # select initial syndrome weight S from Binomial(r, rhoL)
-        S = int(np.random.binomial(r, rho_bar, 1))
-        state = [S, initial_t]
+    S = random.choices([i for i in range(r + 1)], weights = prob, k = 1)[0]
+    state = [S, initial_t]
 
-        print("Initial State:", state)
+    print("Initial State:", state)
 
-        while (state[1] > 0):
-            p_sigma_list = []
-            sigma_list = []
-            S = state[0]
-            t = state[1]
+    while (state[1] > 0):
+        p_sigma_list = []
+        sigma_list = []
+        S = state[0]
+        t = state[1]
+
+        print("(S,t)= (%d,%d)" % (S,t))
+        
+        X_bar = XBar(S,t,n,w)
+        pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
+
+        T = threshold(d, pi1prime, pi0prime, n, t)
+
+        # if a threshold can't be found, this trial will be discarded
+        if (T == 'F'):
+            print("No threshold can be found")
+            return 'N'
+
+        p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
+        PL = pL(d, pi1prime, pi0prime, p, T, t, n)
+        print("PL", PL)
+        if (np.isnan(PL)):
+            PL = 0
+
+        # generate the p_sigma_prime and prepare a list for random weighted number generation
+        for sigma in range(T, d+1):
+            p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+            p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
             
+            p_sigma_list += [p_sigma_pos_prime, p_sigma_neg_prime]
+            sigma_list += [str(sigma) + '+', str(sigma) + '-']
+
+        probabilities = p_sigma_list
+            
+        if (PL != 0):
+            probabilities = p_sigma_list + [PL]
+            sigma_list += ['L']
+
+        print("p_sigma_list:\n", p_sigma_list)
+        print("sigma_list:\n", sigma_list)
+
+        
+        # randomly select a transition step
+        nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)[0]
+        print("nextSigma", nextSigma)
+        
+        if (nextSigma == 'L'):
+            return 'F'
+        elif (nextSigma[-1] == '+'):
+            state[0] += d - 2 * int(nextSigma[:-1])
+            state[1] += 1                
+        elif (nextSigma[-1] == '-'):
+            state[0] += d - 2 * int(nextSigma[:-1])
+            state[1] -= 1
+        print("Next state (S,t)=(%d,%d)" % (state[0],state[1]))
+    if (state[1] == 0):
+        return 'S'
+        
+def DFR(n,w,t, trials):
+    iteration = 0
+    noThres = 0
+    others = 0
+    success = 0
+    fail = 0
+
+    rho_bar = rhoBar(n, w, t)
+            
+    # select initial syndrome weight S from Proposition 3
+    prob = syndromeDist(n, w, t, rho_bar)
+    
+    while (iteration < trials):
+        print("############### Iteration %d ###############" % iteration)
+        status = MCMC(n, w, t, prob, rho_bar)
+        print(status)
+        if (status == 'O'):
+            others += 1
+        elif (status == 'N'):
+            noThres += 1
+        elif (status == 'S'):
+            success += 1
+            iteration +=1
+        elif (status == 'F'):
+            fail += 1
+            iteration +=1
+
+    print("Success: %d, fail: %d, no threshold: %d, others: %d"
+          %(success, fail, noThres, others))
+    
+    return fail / trials
+
+############################# DFR Algorithms #############################
+def DFR_new(t_pass, t_fail, n, w, t, prob):
+    '''
+    Input: t_pass, t_fail, codelength: n, row-weight: w, initial no. of errors: t,
+    distribution of initial syndrome weight: prob
+    '''
+    d = w // 2
+    r = n // 2
+    maxS = r
+    DFR = {}
+
+    while (prob[maxS] < 10 ** (-30)):
+        maxS -= 1
+
+    print("maxS:", maxS)
+
+    minS = int(np.ceil(d / 2)) + 1
+    print("minS:", minS)
+    
+    # initialisation of DFR
+    for t in range(0, t_fail):
+        DFR[(0,t)] = 0
+        
+    for S in range(1, minS):
+        DFR[(S,0)] = 0
+
+    for S in range(1, minS):
+        for t in range(1, t_fail):
+            DFR[(S,t)] = 1
+
+    # computation in ascending manner
+    for S in range(minS, maxS + 1):
+        for t in range(t_pass, t_fail + 1):
             X_bar = XBar(S,t,n,w)
             pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
-            print("S = %d, t= %d" % (S,t))
-            print("X_bar = %f, pi1prime = %f, pi0prime = %f" % (X_bar, pi1prime, pi0prime))
 
-            # probabilities pi0prime and pi1prime can exceed 1
-            if (pi1prime > 1):
-                pi1prime = 0.999
-            if (pi0prime > 1):
-                pi0prime = 0.999
-
-            print("X_bar = %f, pi1prime = %f, pi0prime = %f" % (X_bar, pi1prime, pi0prime))
-            
             T = threshold(d, pi1prime, pi0prime, n, t)
 
+            # if a threshold can't be found, set as ceil((d + 1) / 2)
+            if (T == 'F'):
+                T = int(np.ceil((d + 1) / 2))
+
+            T = max(T, int(np.ceil((d + 1) / 2)))
+            #T = int(np.ceil((d + 1) / 2))
             p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
             PL = pL(d, pi1prime, pi0prime, p, T, t, n)
 
-            # generate the p_sigma_prime and prepare a list for random weighted number generation
-            for sigma in range(T, d+1):
+            DFR[(S,t)] = PL
+            print("T:", T)
+            
+            for sigma in range(T, min(d + 1, S + 1)):
+                print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
                 p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
-                p_sigma_pos_prime, p_sigma_neg_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
+                p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
+            
+                DFR[(S,t)] += p_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + p_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
+
+    print("DFR:\n", DFR)
+    
+    fail = 0
+
+    for S in range(1, minS):
+        fail += prob[S]
+
+    for S in range(minS, maxS):
+        fail += prob[S] * DFR[(S,t)]
+
+    return(fail)
+
+############################# BIKE Algorithms #############################
+def BIKE1(H, s, u):
+    '''
+    Input: Parity-check matrix H, syndrome s, upper bound u
+    Output: Error vector e
+    '''
+    S = sum(s==1)
+    w = sum(H[0,:] == 1)
+    r, n = H.shape
+    d = w // 2
+    delta = 5
+    
+    X_bar = XBar(S,t,n,w)
+    pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
+    T = threshold(d, pi1prime, pi0prime, n, t)
+
+    J = [[]]
+    for i in range(T):
+        J += [[]]
+    
+    for j in range(n):
+        ell = min(sum(H[:,j] == s), T)
+        J[ell].append(j)
+
+    e = np.zeros(n, dtype = np.int32)
+    for bits in J[T]:
+        e[bits] = 1
+
+    s_prime = np.array(s) - convertBinary(np.matmul(e, np.transpose(H)))
+
+############################### FYP Demo ################################
+
+def demo(H, y):
+    '''
+    Simple demo for Bit-Flipping algorithm
+    Input: Parity-check matrix H, ciphertext y
+    output: decrypted text y'
+
+    Assumptions: only 1 bit of error was introduced, thus set threshold = 1
+    and decoding will finish in 1 step.
+    '''
+
+    print("H:\n", H)
+    r, n = H.shape
+    w = sum(H[0,:] == 1)
+    d = w // 2
+    iteration = 1
+    flipped = 1
+
+    s = convertBinary(np.matmul(y, np.transpose(H)))
+    print("\ny=mH^T + e:", y, "#ciphertext")
+    print("Threshold T:", d)
+    print("\n######### Starting the Bit-Flipping Algorithm... #########\n")
+
+    print("s = yH^T:", s)
+    while (np.count_nonzero(s) > 0 and flipped == 1):
+        flipped = 0
+        # syndrome weight
+        T = 1
+
+        for j in range(n):
+            if (sum((s + H[:,j]) == 2)) >= T * d:
+                print("FLIPPED position %d" % j)
+                y[j] = y[j] ^ 1
+                print("y:", y)
+                s = convertBinary(np.matmul(y, np.transpose(H)))
+                print("s = yH^T:", s)
+                flipped = 1
                 
-                p_sigma_list += [p_sigma_pos_prime, p_sigma_neg_prime]
-                sigma_list += [str(sigma) + '+', str(sigma) + '-']
-
-            print("pL = ", PL)
-            probabilities = p_sigma_list
-            
-            if (PL != 0):
-                probabilities = p_sigma_list + [PL]
-                sigma_list += ['L']
-
-            print("\n")
-            print("probabilities:", probabilities)
-            print("Total probability:", sum(probabilities))
-            print("sigma_list:", sigma_list)
-            
-            # randomly select a transition step
-            nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)[0]
-            print("Next selected state:", nextSigma)
-
-            if (nextSigma == 'L'):
-                fail += 1
-                break
-            elif (nextSigma[-1] == '+'):
-                state[0] += d - 2 * int(nextSigma[:-1])
-                state[1] += 1                
-            elif (nextSigma[-1] == '-'):
-                state[0] += d - 2 * int(nextSigma[:-1])
-                state[1] -= 1
-
-            print("State:", state)
-            print("\n")
-            
-    return fail / trials
         
+        iteration += 1
+        
+        # syndrome
+        s = np.matmul(y, np.transpose(H))
+        s = convertBinary(s)
+
+    print("Decrypted text:\n", y)
+    if (sum(s == 1) == 0):
+        return y[0: n-r]
+    else:
+        print("Cannot decode")
+        return 0
