@@ -4,14 +4,14 @@ from FYP import *
 
 # code parameters
 n0 = 2
-r = 1019
-wi = 21
+r = 2003
+wi = 39
 
 #decryption parameters
-method = 'SP'
+method = 'BF'
 N = 10
 p = 0.01
-t = 1
+t = 21
 
 d = r // 2
 
@@ -22,40 +22,13 @@ w = wi * n0
 
 ##################################### Testing functions ####################################
 
+print('########## Generate keys ##########')
 # generate a random (n,r,w)-QC-MDPC matrix H
 H = genQCMDPC(n, r, w)
 
 # Generate the corresponding generator matrix G
 G = genGenQCMDPC(H)
 
-# count the number of 4 cycles in the Tanner graph of H
-count4Cycles(H)
-
-# generate the distance spectrum of h (first row of H)
-a, b = genDistSpec(H[0, :])
-print("Distance spectrum of h:\n", a)
-print("Distance spectrum with multiplicity of h:\n", b)
-
-# generate a random message m of weight d
-m = genRandomVector(r, d)
-
-# generate a random error vector e of weight t
-e = genRandomVector(n, t)
-
-# encrypt the message m
-y = encryptMcEliece(G, m, e)
-
-# decrypt the ciphertext
-decryptedText = decryptMcEliece(H, y, method, N, p)
-
-# check if decryption is correct
-decryptSuccess(m, decryptedText)
-
-print("############ SBSBF ################")
-N = 50
-codeword = convertBinary(np.array(y) + np.array(e))
-# decrypt the ciphertext using Step-by-Step decoder
-decryptedText = SBSBF(H, y, w, t, N, codeword)
-
-# check if decryption is correct
-decryptSuccess(m, decryptedText)
+print('########## DFR ##########')
+DFR_Exp(H, G, w, t, N=100, trials=1000, method='SBSBF')
+print("(n,w,t):", (n,w,t))
