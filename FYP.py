@@ -1032,23 +1032,27 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
 
     print("maxS:", maxS)
 
-    minS = int(np.ceil(d / 2)) + 1
+    minS = int(np.floor(d / 2)) + 1
     print("minS:", minS)
     
     # initialisation of DFR
-    for t in range(0, t_fail):
+    for t in range(0, t_fail + 1):
         DFR[(0,t)] = 0
         
     for S in range(1, minS):
         DFR[(S,0)] = 0
-
-    for S in range(1, minS):
         for t in range(1, t_fail):
             DFR[(S,t)] = 1
+            
+    for S in range(1, r + 1):
+        DFR[(S, t_fail)] = 1
+        
+    for S in range(minS, r + 1):
+        DFR[(S, t_pass)] = 0
 
     # computation in ascending manner
     for S in range(minS, maxS + 1):
-        for t in range(t_pass, t_fail + 1):
+        for t in range(t_pass + 1, t_fail):
             X_bar = XBar(S,t,n,w)
             pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
 
@@ -1056,15 +1060,15 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
 
             # if a threshold can't be found, set as ceil((d + 1) / 2)
             if (T == 'F'):
-                T = int(np.ceil((d + 1) / 2))
+                T = int(minS)
 
-            T = max(T, int(np.ceil((d + 1) / 2)))
-            #T = int(np.ceil((d + 1) / 2))
+            T = max(minS, T)
+            print("T:", T)
+            
             p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
             PL = pL(d, pi1prime, pi0prime, p, T, t, n)
 
             DFR[(S,t)] = PL
-            print("T:", T)
             
             for sigma in range(T, min(d + 1, S + 1)):
                 print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
@@ -1077,10 +1081,7 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
     
     fail = 0
 
-    for S in range(1, minS):
-        fail += prob[S]
-
-    for S in range(minS, maxS):
+    for S in range(1, maxS + 1,2):
         fail += prob[S] * DFR[(S,t)]
 
     return(fail)
