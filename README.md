@@ -1,7 +1,7 @@
 # Final-Year-Project
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
-A research on optimising binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
+A research on binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
 <br>  
 **Currently working on**:  
 1. Analysing the Markov Chain detailed in the paper titled "On the Decoding Failure Rate of QC-MDPC" by Nicolas Sendrier and Valentin Vasseur.
