@@ -704,6 +704,7 @@ def SBSBF(H, y, w, t, N, codeword):
             
         T = threshold(d, pi1prime, pi0prime, n, t)
 
+        # sample a bit to flip for at most n times
         for k in range(n):
             j = sampling(H, s, method = 2)
             if ( sum((s + H[:, j]) == 2) >= T ):
@@ -1017,9 +1018,9 @@ def DFR(n,w,t, trials):
     return fail / trials
 
 ############################# DFR Algorithms #############################
-def DFR_new(t_pass, t_fail, n, w, t, prob):
+def DFR_new(t_pass, t_fail, n, w, t_init, prob):
     '''
-    Input: t_pass, t_fail, codelength: n, row-weight: w, initial no. of errors: t,
+    Input: t_pass, t_fail, codelength: n, row-weight: w, initial no. of errors: t_init,
     distribution of initial syndrome weight: prob
     '''
     d = w // 2
@@ -1030,6 +1031,10 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
     while (prob[maxS] < 10 ** (-30)):
         maxS -= 1
 
+    # syndrome weight and t_init must have same parity (odd/even)
+    if ( (maxS + t_init) % 2 == 1 ):
+        maxS -= 1
+    
     print("maxS:", maxS)
 
     minS = int(np.floor(d / 2)) + 1
@@ -1063,7 +1068,7 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
                 T = int(minS)
 
             T = max(minS, T)
-            print("T:", T)
+            #print("T:", T)
             
             p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
             PL = pL(d, pi1prime, pi0prime, p, T, t, n)
@@ -1071,18 +1076,23 @@ def DFR_new(t_pass, t_fail, n, w, t, prob):
             DFR[(S,t)] = PL
             
             for sigma in range(T, min(d + 1, S + 1)):
-                print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
+                #print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
                 p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
                 p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
             
                 DFR[(S,t)] += p_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + p_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
 
-    print("DFR:\n", DFR)
+    #print("DFR:\n", DFR)
     
     fail = 0
 
-    for S in range(1, maxS + 1,2):
-        fail += prob[S] * DFR[(S,t)]
+    if (t_init % 2 == 0):
+        startS = 2
+    else:
+        startS = 1
+
+    for S in range(startS, maxS + 1, 2):
+        fail += prob[S] * DFR[(S,t_init)]
 
     return(fail)
 
