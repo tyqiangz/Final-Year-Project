@@ -317,6 +317,31 @@ def bitFlipping(H, c, N):
     
     return 0
 
+def BF(H, y, N):
+    '''
+    H: parity-check matrix
+    y: word to be decoded
+    N: max no. of decoding iterations
+    '''
+    r, n = H.shape
+    d = sum(H[0,:] == 1) // 2
+    i = 0
+    s = convertBinary(np.matmul(y, np.transpose(H)))
+
+    while ( (sum(s==1) != 0) and i < N ):
+        s = convertBinary(np.matmul(y, np.transpose(H)))
+        for j in range(n):
+            sigma_j = np.matmul(s, H[:,j])
+            if (sigma_j >= 0.5 * d):
+                y[j] = (1 - y[j]) % 2
+        i += 1
+
+    s = convertBinary(np.matmul(y, np.transpose(H)))
+    if (sum(s==1) == 0):
+        return y
+    else:
+        return 0
+
 # input: 
 #   H: Parity-check matrix (not necessarily QC-MDPC)
 #   y: word to be decoded
@@ -630,13 +655,38 @@ def decodeMax(H, G, method, N, p):
         t += 1
 ########################## Step-By-Step Bit-Flipping Decoder ##########################
 
-# input: parity-check matrix H, syndrome s
-# method 1: random selection amongst j where sigma_j >= T
-# method 2: random select an unsatisfied eqn, then select a nonzero bit of that eqn
+# input: parity-check matrix H, syndrome s, threshold T, method:
+# method 1: random select an unsatisfied eqn, then select a nonzero bit of that eqn
+# method 2: random selection amongst j where sigma_j >= T
 # method 3: return argmax_j sigma_j
 # output: a bit j such that sigma_j >= T, else return 'F'
-def sampling(H, s, method):
+def sampling(H, s, T, method):
+    r, n = H.shape
+
+    # method 1: random select an unsatisfied eqn, then select a nonzero bit of that eqn
+    # loop until a nonzero bit j where sigma_j >= T is found
+    # bound the loop by n iterations, returns F if such a bit cannot be found
     if (method == 1):
+        for q in range(n):
+            # extract nonzero entries of s
+            unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
+            
+            # pick a random unsatisfied eqn
+            i = random.choice(unsatEqn)
+            
+            # extract nonzero entries of ith row of H
+            ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
+            
+            # pick a random index of nonzero entry of ith row of H
+            j = random.choice(ones)
+
+            if ( sum((s + H[:, j]) == 2) >= T ):
+                return j
+
+        return 'F'
+    
+    # method 2: random selection amongst j where sigma_j >= T
+    if (method == 2):
         # compute all the sigma_j for all j = 0, 1, ..., n-1
         sigmaJ = np.matmul(s, H)
         
@@ -651,19 +701,9 @@ def sampling(H, s, method):
             return random.choice(toFlip)
         else:
             return 'F'
-
-    if (method == 2):
-        # extract nonzero entries of s
-        unsatEqn = [idx for idx, s_j in enumerate(s) if s_j == 1]
         
-        # pick a random unsatisfied eqn
-        i = random.choice(unsatEqn)
-        
-        # extract nonzero entries of ith row of H
-        ones = [bit for bit, h_ij in enumerate(H[i,:]) if h_ij == 1]
-        # pick a random index of nonzero entry of ith row of H
-        return random.choice(ones)
-
+    # method 3: return argmax_j sigma_j
+    # in the case where there are many positions k = argmax_j sigma_j, randomly return any of them
     if (method == 3):
         # compute all the sigma_j for all j = 0, 1, ..., n-1
         sigmaJ = np.matmul(s, H)
@@ -675,8 +715,7 @@ def sampling(H, s, method):
 
         return random.choice(maxIndices)
         
-
-def SBSBF(H, y, w, t, N, codeword):
+def SBSBF(H, y, w, t, N, codeword, samp_method):
     '''
     Step-by-Step Bit Flipping algorithm
     Input: Parity-check matrix H, ciphertext y, weight of each parity-check eqn w,
@@ -704,13 +743,14 @@ def SBSBF(H, y, w, t, N, codeword):
             
         T = threshold(d, pi1prime, pi0prime, n, t)
 
-        # sample a bit to flip for at most n times
-        for k in range(n):
-            j = sampling(H, s, method = 2)
-            if ( sum((s + H[:, j]) == 2) >= T ):
-                y[j] = y[j] ^ 1
-                flipped = 1
-                break
+        j = sampling(H, s, T, samp_method)
+        # if no such bit can be sampled, then exit algorithm, decoding failure
+        if (j == 'F'):
+            print("Cannot sample a bit")
+            return 0
+        else:
+            y[j] = y[j] ^ 1
+            flipped = 1
             
         # syndrome
         s = np.matmul(y, np.transpose(H))
@@ -719,52 +759,11 @@ def SBSBF(H, y, w, t, N, codeword):
     print("Decrypted text:\n", y)
     print("Codeword:\n", codeword)
     if (sum(s == 1) == 0):
-        return y[0: n-r]
+        return y
     else:
         print("Cannot decode")
         return 0
 
-def DFR_Exp(H, G, w, t, N, trials, method):
-    '''
-    H: parity-check matrix
-    G: generator matrix
-    w: row-weight of H
-    t: number of errors
-    N: max no. of iterations for decoder
-    trials: no. of decoding trials
-    method: decoding method 'BF' or 'SP' or 'SBSBF'
-    '''
-    r, n = H.shape
-    d = w // 2
-
-    DFR = 0
-    
-    for k in range(trials):
-        print("Trial ", k)
-        # generate a random message m of weight between 1 and r
-        m = genRandomVector(r, random.randint(1, r))
-
-        # generate a random error vector e of weight t
-        e = genRandomVector(n, t)
-
-        # encrypt the message m
-        y = encryptMcEliece(G, m, e)
-
-        codeword = convertBinary(np.array(y) + np.array(e))
-
-        if (method == 'SBSBF'):
-            # decrypt the ciphertext
-            decryptedText = SBSBF(H, y, w, t, N, codeword)
-
-        # check if decryption is correct
-        status = decryptSuccess(m, decryptedText)
-
-        if (status == False):
-            DFR += 1
-
-    print("Failed:", DFR, "Trials", trials, "DFR:", DFR / trials)
-
-    return(DFR / trials)
 #################### Markov Chain Monte Carlo Simulation Algorithms ####################
 
 def XBar(S,t,n,w):
@@ -882,10 +881,18 @@ def threshold(d, pi1prime, pi0prime, n, t):
     return math.ceil(numer / denom)
 
 def p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma):
+        
     p_sigma_neg = t * sigma * binom.pmf(sigma, d, pi1prime) / (w * S)
-    p_sigma_pos = (n - t) * sigma * binom.pmf(sigma, d, pi0prime) / (w * S)
-
+    p_sigma_pos = (n - t) * sigma * binom.pmf(sigma, d, pi0prime) / (w * S)        
+        
     return p_sigma_neg, p_sigma_pos
+
+def q_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma):
+        
+    q_sigma_neg = t * binom.pmf(sigma, d, pi1prime) / n
+    q_sigma_pos = (n - t) * binom.pmf(sigma, d, pi0prime) / n
+        
+    return q_sigma_neg, q_sigma_pos
 
 def calcP(T, n, d, t, w, S, pi1prime, pi0prime):
     p = 0
@@ -895,6 +902,15 @@ def calcP(T, n, d, t, w, S, pi1prime, pi0prime):
         p += p_sigma_neg + p_sigma_pos
 
     return p
+
+def calcQ(T, n, d, t, w, S, pi1prime, pi0prime):
+    q = 0
+    for i in range(T):
+        sigma = i
+        q_sigma_neg, q_sigma_pos = q_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+        q += q_sigma_neg + q_sigma_pos
+
+    return q
 
 def pL(d, pi1prime, pi0prime, p, T, t, n):
     prob1 = 0
@@ -910,118 +926,89 @@ def pL(d, pi1prime, pi0prime, p, T, t, n):
 def p_sigmas_prime(p_sigma_neg, p_sigma_pos, pL, p):
     return p_sigma_neg * (1 - pL) / (1 - p), p_sigma_pos * (1 - pL) / (1 - p)
 
-# input: codelength: n, weight of 1 parity-check eqn: w, number of errors: t,
-# distribution of initial syndrome weight by Proposition 3: prob,
-# : rho_bar
-# ouput: this algorithm performs the Markov Chain Monte Carlo Simulation of one set of
-# parameters (n,w,t) and returns success: 'S' or failure: 'F' or no threshold: 'N'
-# or Others: 'O'
-def MCMC(n, w, t, prob, rho_bar):
-    d = w // 2
-    r = n // 2
-    fail = 0
-    initial_t = t
+def q_sigmas_prime(q_sigma_neg, q_sigma_pos, pL, q):
+    return q_sigma_neg * (1 - pL) / (1 - q), q_sigma_pos * (1 - pL) / (1 - q)
+
+def q_maxs(n, d, t, pi1prime, pi0prime, sigma):
+    temp1 = 0
+    temp0 = 0
+
+    for x in range(sigma):
+        temp1 += binom.pmf(x, d, pi1prime)
+        temp0 += binom.pmf(x, d, pi1prime)
+
+    temp1_new = temp1 + binom.pmf(sigma, d, pi1prime)
+    temp0_new = temp0 + binom.pmf(sigma, d, pi0prime)
     
-    S = random.choices([i for i in range(r + 1)], weights = prob, k = 1)[0]
-    state = [S, initial_t]
+    prob_max = (temp1_new ** t) * (temp0_new ** (n-t)) - (temp1 ** t) * (temp0 ** (n-t))
 
-    print("Initial State:", state)
+    denom = t * binom.pmf(sigma, d, pi1prime) + (n - t) * binom.pmf(sigma, d, pi0prime)
 
-    while (state[1] > 0):
-        p_sigma_list = []
-        sigma_list = []
-        S = state[0]
-        t = state[1]
+    q_max_plus = t * binom.pmf(sigma, d, pi1prime) * prob_max
+    q_max_minus = (n - t) * binom.pmf(sigma, d, pi0prime) * prob_max
 
-        print("(S,t)= (%d,%d)" % (S,t))
-        
-        X_bar = XBar(S,t,n,w)
-        pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
-
-        T = threshold(d, pi1prime, pi0prime, n, t)
-
-        # if a threshold can't be found, this trial will be discarded
-        if (T == 'F'):
-            print("No threshold can be found")
-            return 'N'
-
-        p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
-        PL = pL(d, pi1prime, pi0prime, p, T, t, n)
-        print("PL", PL)
-        if (np.isnan(PL)):
-            PL = 0
-
-        # generate the p_sigma_prime and prepare a list for random weighted number generation
-        for sigma in range(T, d+1):
-            p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
-            p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
-            
-            p_sigma_list += [p_sigma_pos_prime, p_sigma_neg_prime]
-            sigma_list += [str(sigma) + '+', str(sigma) + '-']
-
-        probabilities = p_sigma_list
-            
-        if (PL != 0):
-            probabilities = p_sigma_list + [PL]
-            sigma_list += ['L']
-
-        print("p_sigma_list:\n", p_sigma_list)
-        print("sigma_list:\n", sigma_list)
-
-        
-        # randomly select a transition step
-        nextSigma = random.choices(sigma_list, weights = probabilities, k = 1)[0]
-        print("nextSigma", nextSigma)
-        
-        if (nextSigma == 'L'):
-            return 'F'
-        elif (nextSigma[-1] == '+'):
-            state[0] += d - 2 * int(nextSigma[:-1])
-            state[1] += 1                
-        elif (nextSigma[-1] == '-'):
-            state[0] += d - 2 * int(nextSigma[:-1])
-            state[1] -= 1
-        print("Next state (S,t)=(%d,%d)" % (state[0],state[1]))
-    if (state[1] == 0):
-        return 'S'
-        
-def DFR(n,w,t, trials):
-    iteration = 0
-    noThres = 0
-    others = 0
-    success = 0
-    fail = 0
-
-    rho_bar = rhoBar(n, w, t)
-            
-    # select initial syndrome weight S from Proposition 3
-    prob = syndromeDist(n, w, t, rho_bar)
-    
-    while (iteration < trials):
-        print("############### Iteration %d ###############" % iteration)
-        status = MCMC(n, w, t, prob, rho_bar)
-        print(status)
-        if (status == 'O'):
-            others += 1
-        elif (status == 'N'):
-            noThres += 1
-        elif (status == 'S'):
-            success += 1
-            iteration +=1
-        elif (status == 'F'):
-            fail += 1
-            iteration +=1
-
-    print("Success: %d, fail: %d, no threshold: %d, others: %d"
-          %(success, fail, noThres, others))
-    
-    return fail / trials
+    return q_max_plus, q_max_minus
 
 ############################# DFR Algorithms #############################
-def DFR_new(t_pass, t_fail, n, w, t_init, prob):
+def DFR_exp(H, G, w, t, N, trials, method, samp_method):
     '''
-    Input: t_pass, t_fail, codelength: n, row-weight: w, initial no. of errors: t_init,
-    distribution of initial syndrome weight: prob
+    H: parity-check matrix
+    G: generator matrix
+    w: row-weight of H
+    t: number of errors
+    N: max no. of iterations for decoder
+    trials: no. of decoding trials
+    method: decoding method 'BF' or 'SP' or 'SBSBF'
+    samp_method: sampling method of a bit to flip
+    '''
+    r, n = H.shape
+    d = w // 2
+
+    DFR = 0
+    
+    for k in range(trials):
+        print("Trial ", k)
+        # generate a random message m of weight between 1 and r
+        m = genRandomVector(r, random.randint(1, r))
+
+        # generate a random error vector e of weight t
+        e = genRandomVector(n, t)
+
+        # encrypt the message m
+        y = encryptMcEliece(G, m, e)
+
+        codeword = convertBinary(np.array(y) + np.array(e))
+
+        if (method == 'SBSBF'):
+            # decrypt the ciphertext
+            decryptedText = SBSBF(H, y, w, t, N, codeword, samp_method)
+        elif (method == 'BF'):
+            # decrypt the ciphertext
+            decryptedText = BF(H, y, N=20)
+                    
+        # check if decryption is correct
+        if (type(decryptedText) == int):
+            status = decryptSuccess(m, decryptedText)
+        else:
+            status = decryptSuccess(m, decryptedText[0: n-r])
+
+        if (status == False):
+            DFR += 1
+
+    print("Failed:", DFR, "Trials", trials, "DFR:", DFR / trials)
+
+    return(DFR / trials)
+
+def DFR_model(t_pass, t_fail, n, w, t_init, prob, samp_method):
+    '''
+    Input:
+    t_pass: integer t such that SBSBF decoder always decodes for given code parameters
+    t_fail: integer t such that SBSBF decoder always fail to decode for given code parameters
+    n: codelength
+    w: row-weight
+    t_init: initial no. of errors
+    prob: distribution of initial syndrome weight
+    samp_method: sampling method of a bit to flip
     '''
     d = w // 2
     r = n // 2
@@ -1072,16 +1059,29 @@ def DFR_new(t_pass, t_fail, n, w, t_init, prob):
             
             p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
             PL = pL(d, pi1prime, pi0prime, p, T, t, n)
-
-            DFR[(S,t)] = PL
             
             for sigma in range(T, min(d + 1, S + 1)):
                 #print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
-                p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
-                p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
-            
-                DFR[(S,t)] += p_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + p_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
+                if (samp_method == 1):
+                    p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+                    p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
 
+                    DFR[(S,t)] = PL
+                    DFR[(S,t)] += p_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + p_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
+                elif (samp_method == 2):
+                    q = calcQ(T, n, d, t, w, S, pi1prime, pi0prime)
+                    q_sigma_neg, q_sigma_pos = q_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
+                    q_sigma_neg_prime, q_sigma_pos_prime = q_sigmas_prime(q_sigma_neg, q_sigma_pos, PL, q)
+
+                    DFR[(S,t)] = PL
+                    DFR[(S,t)] += q_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + q_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
+                elif (samp_method == 3):
+                    q_max_plus, q_max_minus = q_maxs(n, d, t, pi1prime, pi0prime, sigma)
+                    DFR[(S,t)] = 0
+                    DFR[(S,t)] += q_max_minus * DFR[S + d - 2 * sigma, t - 1] + q_max_plus * DFR[S + d - 2 * sigma, t + 1]
+            if (T > min(d, S)):
+                print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
+                DFR[(S,t)] = 1
     #print("DFR:\n", DFR)
     
     fail = 0
