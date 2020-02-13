@@ -3,7 +3,7 @@ import math
 from sympy import *
 import numpy as np
 from scipy import special
-from scipy.stats import binom
+from scipy.stats import binom, hypergeom
 import networkx as nx
 from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
@@ -182,6 +182,12 @@ def genGenQCMDPC(H):
     else :
         #concatenate identity matrix of order (n - r) and the stack of circulant matrices to form G
         G = np.concatenate((G, block0), axis = 1)
+
+    w = sum(H[0, :])
+    
+    filename = str(n) + "_" + str(r) + "_" + str(w) + "_" + "GeneratorMatrix.csv"
+
+    np.savetxt(filename, G, delimiter = ",", fmt = "%d")
     
     return G
 
@@ -742,6 +748,7 @@ def SBSBF(H, y, w, t, N, codeword, samp_method):
         pi1prime, pi0prime = counterDist(S, X_bar, n, w, d, t)
             
         T = threshold(d, pi1prime, pi0prime, n, t)
+        T = max(floor(d / 2) + 1, T)
 
         j = sampling(H, s, T, samp_method)
         # if no such bit can be sampled, then exit algorithm, decoding failure
@@ -772,13 +779,14 @@ def XBar(S,t,n,w):
 
     for i in range(1, t+1, 2):
         rho = rhoL(n, w, t, i)
-        numer += (i - 1) * rho
-        denom += rho
- 
+        if (not(np.isnan(rho)) and not(np.isinf(rho))):
+            numer += (i - 1) * rho
+            denom += rho
+    
     return S * numer / denom
 
 def rhoL(n, w, t, ell):
-    return special.binom(w, ell) * special.binom(n - w, t - ell) / special.binom(n, t)
+    return hypergeom.pmf(ell, n, w, t)
 
 def rhoBar(n, w, t):
     temp = 0
@@ -1041,7 +1049,9 @@ def DFR_model(t_pass, t_fail, n, w, t_init, prob, samp_method):
         
     for S in range(minS, r + 1):
         DFR[(S, t_pass)] = 0
-
+    
+    #print("DFR:\n", DFR)
+    
     # computation in ascending manner
     for S in range(minS, maxS + 1):
         for t in range(t_pass + 1, t_fail):
@@ -1055,34 +1065,40 @@ def DFR_model(t_pass, t_fail, n, w, t_init, prob, samp_method):
                 T = int(minS)
 
             T = max(minS, T)
-            #print("T:", T)
+            print("T:", T)
             
             p = calcP(T, n, d, t, w, S, pi1prime, pi0prime)
             PL = pL(d, pi1prime, pi0prime, p, T, t, n)
+            q = calcQ(T, n, d, t, w, S, pi1prime, pi0prime)
+            if (samp_method == 1):
+                DFR[(S,t)] = PL
+            elif (samp_method == 2):
+                DFR[(S,t)] = PL
+            elif (samp_method == 3):
+                DFR[(S,t)] = pL(d, pi1prime, pi0prime, p, minS, t, n)
             
-            for sigma in range(T, min(d + 1, S + 1)):
-                #print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
-                if (samp_method == 1):
+            if (samp_method == 1):
+                for sigma in range(T, min(d + 1, S + 1)):
+                    print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
                     p_sigma_neg, p_sigma_pos = p_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
                     p_sigma_neg_prime, p_sigma_pos_prime = p_sigmas_prime(p_sigma_neg, p_sigma_pos, PL, p)
-
-                    DFR[(S,t)] = PL
+            
                     DFR[(S,t)] += p_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + p_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
-                elif (samp_method == 2):
-                    q = calcQ(T, n, d, t, w, S, pi1prime, pi0prime)
+            
+            elif (samp_method == 2):
+                for sigma in range(T, min(d + 1, S + 1)):
+                    print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
                     q_sigma_neg, q_sigma_pos = q_sigmas(n, d, t, w, S, pi1prime, pi0prime, sigma)
                     q_sigma_neg_prime, q_sigma_pos_prime = q_sigmas_prime(q_sigma_neg, q_sigma_pos, PL, q)
 
-                    DFR[(S,t)] = PL
                     DFR[(S,t)] += q_sigma_neg_prime * DFR[S + d - 2 * sigma, t - 1] + q_sigma_pos_prime * DFR[S + d - 2 * sigma, t + 1]
-                elif (samp_method == 3):
+                    
+            elif (samp_method == 3):
+                for sigma in range(minS, min(d + 1, S + 1)):
+                    print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
                     q_max_plus, q_max_minus = q_maxs(n, d, t, pi1prime, pi0prime, sigma)
-                    DFR[(S,t)] = 0
+                    
                     DFR[(S,t)] += q_max_minus * DFR[S + d - 2 * sigma, t - 1] + q_max_plus * DFR[S + d - 2 * sigma, t + 1]
-            if (T > min(d, S)):
-                print("(S,t,sigma) = (%d,%d,%d)" % (S,t,sigma))
-                DFR[(S,t)] = 1
-    #print("DFR:\n", DFR)
     
     fail = 0
 
@@ -1092,6 +1108,9 @@ def DFR_model(t_pass, t_fail, n, w, t_init, prob, samp_method):
         startS = 1
 
     for S in range(startS, maxS + 1, 2):
+        #print("DFR[(%d,%d)]: %f" % (S, t_init, DFR[(S,t_init)]) )
+        if (math.isnan(DFR[(S,t_init)]) or math.isnan(prob[S])):
+            continue
         fail += prob[S] * DFR[(S,t_init)]
 
     return(fail)
@@ -1151,6 +1170,7 @@ def demo(H, y):
     print("\n######### Starting the Bit-Flipping Algorithm... #########\n")
 
     print("s = yH^T:", s)
+    print("sigmaJ:", np.matmul(s, np.transpose(H)))
     while (np.count_nonzero(s) > 0 and flipped == 1):
         flipped = 0
         # syndrome weight
