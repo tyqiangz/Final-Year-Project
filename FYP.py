@@ -714,12 +714,16 @@ def sampling(H, s, T, method):
         # compute all the sigma_j for all j = 0, 1, ..., n-1
         sigmaJ = np.matmul(s, H)
         j = np.argmax(sigmaJ)
-        maxIndices = []
-        for i in range(len(sigmaJ)):
-            if (sigmaJ[i] == sigmaJ[j]):
-                maxIndices += [i]
 
-        return random.choice(maxIndices)
+        if (sigmaJ[j] < T):
+            return 'F'
+        else:
+            maxIndices = []
+            for i in range(len(sigmaJ)):
+                if (sigmaJ[i] == sigmaJ[j]):
+                    maxIndices += [i]
+
+            return random.choice(maxIndices)
         
 def SBSBF(H, y, w, t, N, codeword, samp_method):
     '''
@@ -943,7 +947,7 @@ def q_maxs(n, d, t, pi1prime, pi0prime, sigma):
 
     for x in range(sigma):
         temp1 += binom.pmf(x, d, pi1prime)
-        temp0 += binom.pmf(x, d, pi1prime)
+        temp0 += binom.pmf(x, d, pi0prime)
 
     temp1_new = temp1 + binom.pmf(sigma, d, pi1prime)
     temp0_new = temp0 + binom.pmf(sigma, d, pi0prime)
@@ -952,9 +956,9 @@ def q_maxs(n, d, t, pi1prime, pi0prime, sigma):
 
     denom = t * binom.pmf(sigma, d, pi1prime) + (n - t) * binom.pmf(sigma, d, pi0prime)
 
-    q_max_plus = t * binom.pmf(sigma, d, pi1prime) * prob_max
-    q_max_minus = (n - t) * binom.pmf(sigma, d, pi0prime) * prob_max
-
+    q_max_minus = t * binom.pmf(sigma, d, pi1prime) / denom * prob_max
+    q_max_plus = (n - t) * binom.pmf(sigma, d, pi0prime) / denom * prob_max
+    
     return q_max_plus, q_max_minus
 
 ############################# DFR Algorithms #############################
