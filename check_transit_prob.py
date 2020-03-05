@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[11]:
-
+# This program is used to check the accuracy of the transition probabilities
 
 from FYP import *
 import pandas as pd
@@ -10,10 +6,6 @@ import scipy as sp
 from scipy.stats import hypergeom
 import csv
 from datetime import *
-
-
-# In[2]:
-
 
 def genDist(e,H):
     '''
@@ -92,10 +84,6 @@ def flip(e, H, samp_method, NUM_FLIPS):
 
     return e
 
-
-# In[52]:
-
-
 ##################################### Setting parameters ###################################
 
 # code parameters
@@ -114,10 +102,6 @@ w = 2 * d
 print("(r,d,t):", (r,d,t_init))
 
 H = genQCMDPC(n, r, w)
-
-
-# In[57]:
-
 
 NUM_FLIPS = 2
 NUM_TRIALS = 100000
@@ -168,10 +152,6 @@ for i in range(NUM_TRIALS):
 
 print("\nfailed\n", failed)
 
-
-# In[58]:
-
-
 with open('Ft_init_NUMFLIPS_samp_method_' + str(t_init) + '_' + str(NUM_FLIPS) + '_' + str(samp_method) + '.csv', 'w') as f:
     f.write("%s, %s\n" % ("Syndrome Weight (S)", "sigmas"))
     for key in failed.keys():
@@ -192,10 +172,6 @@ with open('1t_init_NUMFLIPS_samp_method_' + str(t_init) + '_' + str(NUM_FLIPS) +
         for entry in sampledBits1[key]:
             f.write("%s," % entry)
         f.write("\n")
-
-
-# In[59]:
-
 
 ########### generate the model transition probabilities ###########
 
@@ -251,10 +227,3 @@ print("Model trans prob, e=1")
 print(transProb1)
 
 print("Total prob:", sum(transProb1[1])+sum(transProb0[1])+PL)
-
-
-# In[ ]:
-
-
-
-
