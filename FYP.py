@@ -1,3 +1,7 @@
+# This file contains all the relevant algorithms I've stated in the Bachelor's thesis report
+# It also includes some algorithms that I've developed but not eventually stated in the report
+# some packages such as sympy might need to be downloaded before the algorithms can be used
+
 import csv
 import math
 from sympy import *
@@ -9,12 +13,14 @@ from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
 import random
 
-# input:
-#   r: length of first row
-#   wi: Hamming weight of first row
-# output:
-#   numpy array of the first row of a circulant block
 def genFirstRow(r, wi):
+    '''
+    input:
+      r: length of first row
+      wi: Hamming weight of first row
+    output:
+      numpy array of the first row of a circulant block
+    '''
     firstRow = np.zeros(r, dtype=np.int32)
     # pick wi numbers from range(wi)
     randomArray = np.random.choice(r, wi, replace=False)
@@ -24,9 +30,11 @@ def genFirstRow(r, wi):
 
     return firstRow
 
-# input:  the first row of the binary circulant matrix
-# output: the binary circulant matrix
 def genCirculant(firstRow):
+    '''
+    input:  the first row of the binary circulant matrix
+    output: the binary circulant matrix
+    '''
     rows = firstRow.size
     firstRow = np.array(firstRow, dtype = np.int32)
     M = np.zeros((rows, rows), dtype = np.int32)
@@ -37,22 +45,28 @@ def genCirculant(firstRow):
             M[i,j] = M[i-1, (j-1)%rows]
     return M
 
-# input: the first row of a circulant matrix
-# output: the first row of the transpose of the circulant matrix
 def genTransposePoly(firstRow):
+    '''
+    input: the first row of a circulant matrix
+    output: the first row of the transpose of the circulant matrix
+    '''
     transposePoly = np.zeros(len(firstRow), dtype = np.int32)
     transposePoly[0] = firstRow[0]
     transposePoly[1:] = np.flip(firstRow[1:])
     return transposePoly
 
-# input: the first row of 2 circulant matrices
-# output: the first row of the sum of the circulant matrices
 def genSumPoly(firstRowA, firstRowB):
+    '''
+    input: the first row of 2 circulant matrices
+    output: the first row of the sum of the circulant matrices
+    '''
     return firstRowA + firstRowB
 
-# input: the first row of 2 circulant matrices
-# output: the first row of the product of the circulant matrices
 def genProdPoly(firstRowA, firstRowB):
+    '''
+    input: the first row of 2 circulant matrices
+    output: the first row of the product of the circulant matrices
+    '''
     r = len(firstRowA)
     prodPoly = np.zeros(r, dtype = np.int32)
     convolvePoly = np.convolve(firstRowA, firstRowB)
@@ -65,9 +79,11 @@ def genProdPoly(firstRowA, firstRowB):
         
     return prodPoly
 
-# input: the first row of a binary circulant matrix
-# output: the first row of the inverse of the binary circulant matrix
 def genInvPoly(firstRow):
+    '''
+    input: the first row of a binary circulant matrix
+    output: the first row of the inverse of the binary circulant matrix
+    '''
     r = len(firstRow)
     invPoly = np.zeros(r, dtype = np.int32)
 
@@ -86,18 +102,22 @@ def genInvPoly(firstRow):
     
     return invPoly
 
-# input: integer array v 
-# output: integer array of v modulo 2
 def convertBinary(v):
+    '''
+    input: integer array v 
+    output: integer array of v modulo 2
+    '''
     for i in range(len(v)):
         v[i] = v[i] % 2
 
     return v
 
-# input: a numpy array
-# output: a Sympy polynomial
-# Assumptions: The coefficients are non-negative
 def convertNumpyToSympy(f):
+    '''
+    input: a numpy array
+    output: a Sympy polynomial
+    Assumptions: The coefficients are non-negative
+    '''
     polynomial = ""
     polynomial = polynomial + str(int(f[0]))
     
@@ -106,9 +126,11 @@ def convertNumpyToSympy(f):
             polynomial += " + " + str(int(f[i])) + "*x**" + str(i)
     return polynomial
 
-# input: a Sympy polynomial
-# output: a numpy array
 def convertSympyToNumpy(f):
+    '''
+    input: a Sympy polynomial
+    output: a numpy array
+    '''
     v = np.array(f.all_coeffs())
 
     #Sympy stores the coefficients of polynomial f(x) in decreasing powers of x
@@ -117,18 +139,20 @@ def convertSympyToNumpy(f):
     
     return v
 
-# input:
-#   firstRow: the first row of the QC-MDPC matrix
-#   n: length of the QC-MDPC code/ no. of bit nodes in the QC-MDPC code
-#   r: no. of rows/cols of each circulant block of the QC-MDPC code
-#   w: sum of the weights (wi) of the first row of all circulant blocks
-#
-# output: A QC-MDPC matrix constructed uing the first row
-#   note that the weight distribution is randomised.
-
-# Note that firstRow is of length n = n0 * r
-# Define f_i(x) to be the Hall's polynomial of H_i
 def genQCMDPC(n, r, w):
+    '''
+    input:
+    firstRow: the first row of the QC-MDPC matrix
+    n: length of the QC-MDPC code/ no. of bit nodes in the QC-MDPC code
+    r: no. of rows/cols of each circulant block of the QC-MDPC code
+    w: sum of the weights (wi) of the first row of all circulant blocks
+
+    output: A QC-MDPC matrix constructed uing the first row
+    note that the weight distribution is randomised.
+
+    Note that firstRow is of length n = n0 * r
+    Define f_i(x) to be the Hall's polynomial of H_i
+    '''
     n0 = int(n / r)
     wi = int(w / n0)
     
@@ -151,6 +175,10 @@ def genQCMDPC(n, r, w):
     return H
 
 def genGenQCMDPC(H):
+    '''
+    Input: parity-check matrix H
+    Output: correspondng generator matrix G
+    '''
     r, n = H.shape
     n0 = int(n / r)
     H_i = np.zeros((r, r), dtype = np.int32)
@@ -194,6 +222,10 @@ def genGenQCMDPC(H):
 # input: an (n,r,w)-QC-MDPC matrix, H
 # output: the number of 4 cycles in the Tanner graph of H
 def count4Cycles(H):
+    '''
+    Input: parity-check matrix
+    Output: Number of 4 cycles in the Tanner graph of H
+    '''
     r, n = H.shape
     num4Cycles = 0
     firstRow = np.zeros(r, dtype = np.int32)
@@ -218,10 +250,11 @@ def count4Cycles(H):
     
     return int(num4Cycles)
 
-
-# Input: A parity-check matrix H (not necessarily QC-MDPC)
-# Output: A plot of the Tanner graph of H
 def drawTanner(H):
+    '''
+    Input: A parity-check matrix H (not necessarily QC-MDPC)
+    Output: A plot of the Tanner graph of H
+    '''
     edges = []
     pos = {}
     
@@ -260,14 +293,16 @@ def drawTanner(H):
     nx.draw_networkx(G, pos = pos, node_color = "white", with_labels = True)
     plt.show()
 
-# input:
-#   H: Parity-check matrix (not necessarily QC-MDPC)
-#   c: word to be decoded
-#   N: cutoff for number of bit-flipping iterations
-# output:
-#   if decoding is successful, return the decoded word
-#   else return 0
 def bitFlipping(H, c, N):
+    '''
+    input:
+    H: Parity-check matrix (not necessarily QC-MDPC)
+    c: word to be decoded
+    N: cutoff for number of bit-flipping iterations
+    output:
+    if decoding is successful, return the decoded word
+    else return 0
+    '''
     print("\nStarting Bit-Flipping Algorithm...")
     rows, cols = H.shape
     
@@ -325,6 +360,7 @@ def bitFlipping(H, c, N):
 
 def BF(H, y, N):
     '''
+    Same as bit-flipping but written using less lines
     H: parity-check matrix
     y: word to be decoded
     N: max no. of decoding iterations
@@ -348,16 +384,17 @@ def BF(H, y, N):
     else:
         return 0
 
-# input: 
-#   H: Parity-check matrix (not necessarily QC-MDPC)
-#   y: word to be decoded
-#   N: cutoff for the number of sum-product iterations
-#   p: probability of a bit being digit 0
-# output:
-#   if decoding is successful, return the decoded word
-#   else return 0
-
 def sumProduct(H, y, N, p):
+    '''
+    input: 
+    H: Parity-check matrix (not necessarily QC-MDPC)
+    y: word to be decoded
+    N: cutoff for the number of sum-product iterations
+    p: probability of a bit being digit 0
+    output:
+    if decoding is successful, return the decoded word
+    else return 0
+    '''
     print("\nStarting Sum-Product Algorithm...")
     rows, cols = H.shape
     
@@ -460,11 +497,13 @@ def sumProduct(H, y, N, p):
     print("Cannot decode")
     return 0
 
-# input:
-#   k: dimension of vector
-#   t: Hamming weight of vector
-# output: random vector of Hamming weight t and dimension k
 def genRandomVector(k, t):
+    '''
+    input:
+    k: dimension of vector
+    t: Hamming weight of vector
+    output: random vector of Hamming weight t and dimension k
+    '''
     randomVector = np.zeros(k, dtype = np.int32)
 
     # pick t random positions out of k positions
@@ -476,13 +515,15 @@ def genRandomVector(k, t):
     
     return randomVector
 
-# input:
-#   G: Generator Matrix of a QC-MDPC matrix
-#   m: Plaintext
-#   e: error vector
-# output:
-#   ciphertext: encrypted message
 def encryptMcEliece(G, m, e):
+    '''
+    input:
+    G: Generator Matrix of a QC-MDPC matrix
+    m: Plaintext
+    e: error vector
+    output:
+    ciphertext: encrypted message
+    '''
     rows, cols = G.shape
     n = cols
     r = cols - rows
@@ -499,20 +540,22 @@ def encryptMcEliece(G, m, e):
     
     return ciphertext
 
-# input: 
-#   H: QC-MDPC matrix
-#   y: ciphertext
-#   method: either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.
-#   N: cutoff for no. of decoding iterations
-#   p: probability of error (only for method = 'SP'. If method = 'BF',
-#       it doesn't matter what value p is
-# output:
-#   decryptedText: decrypted text
-#       (decrypted text can just be an integer if decryption fails)
-#       bitFlipping return 0 if decoding fails due to exceeding max iteration
-#       SumProduct returns 0 if decoding fails due to exceeding max iteration
-#       SumProduct returns -1 if decoding fails due to E[i,j] computation error
 def decryptMcEliece(H, y, method, N, p):
+    '''
+    input: 
+        H: QC-MDPC matrix
+        y: ciphertext
+        method: either 'BF' or 'SP', representing Bit-Flipping and Sum-Product resp.
+        N: cutoff for no. of decoding iterations
+        p: probability of error (only for method = 'SP'. If method = 'BF',
+        it doesn't matter what value p is
+    output:
+        decryptedText: decrypted text
+        (decrypted text can just be an integer if decryption fails)
+    bitFlipping return 0 if decoding fails due to exceeding max iteration
+    SumProduct returns 0 if decoding fails due to exceeding max iteration
+    SumProduct returns -1 if decoding fails due to E[i,j] computation error
+    '''
     r, n = H.shape
 
     if (method == 'BF'):
@@ -535,11 +578,13 @@ def decryptMcEliece(H, y, method, N, p):
             
     return decryptedText
 
-# input: 
-#   plaintext: the original message
-#   decryptedText: decrypted text
-# ouput: returns true if (plaintext == decryptedText) element-wise, returns false otherwise
 def decryptSuccess(plaintext, decryptedText):
+    '''
+    input: 
+    plaintext: the original message
+    decryptedText: decrypted text
+    ouput: returns true if (plaintext == decryptedText) element-wise, returns false otherwise
+    '''
     status = np.array_equal(plaintext, decryptedText)
     if (status == True):
         print("Decryption success!")
@@ -548,9 +593,11 @@ def decryptSuccess(plaintext, decryptedText):
         
     return status
 
-# input: vector v
-# output: distance spectrum of v and distance spectrum with multiplicity of v
 def genDistSpec(v):
+    '''
+    input: vector v
+    output: distance spectrum of v and distance spectrum with multiplicity of v
+    '''
     maxDist = len(v) // 2
     distSpec = []
     
@@ -571,10 +618,12 @@ def genDistSpec(v):
     
     return distSpec, distSpecMult
 
-# input: code parameters n, r
-# output: the first row of an (n,r)-QCMDPC code with no 4 cycles
-# assumptions: n / r is a positive integer
 def genNo4Cycles(n, r):
+    '''
+    input: code parameters n, r
+    output: the first row of an (n,r)-QCMDPC code with no 4 cycles
+    assumptions: n / r is a positive integer
+    '''
     n0 = int(n / r)
     pos = []
     w = []
@@ -612,11 +661,12 @@ def genNo4Cycles(n, r):
                 w[i] -=2
                 return h, sum(w)
 
-# input: code parameters n, r, w
-# output: the first row of an (n,r,w)-QCMDPC code with no 4 cycles
-#           if such a code is attainable in 100 random trials, else return False
-# assumptions: w must be odd
 def genQCNo4(n,r,w):
+    '''
+    input: code parameters n, r, w
+    output: the first row of an (n,r,w)-QCMDPC code with no 4 cycles if such a code is attainable in 100 random trials, else return False
+    assumptions: w must be odd
+    '''
     for i in range(100):
         h, weight = genNo4Cycles(n,r)
         if (weight >= w):
@@ -627,14 +677,17 @@ def genQCNo4(n,r,w):
         return 0
     
     return h
-# input:
-#   H: (n,r,w)-QCMDPC matrix
-#   G: generator matrix of H
-#   method: 'BF' or 'SP' or  'SBSBF'
-#   N: number of decoding iterations
-#   p: probability of success
-#output: the number of errors the decoding method can correct using H
+
 def decodeMax(H, G, method, N, p):
+    '''
+    input:
+    H: (n,r,w)-QCMDPC matrix
+    G: generator matrix of H
+    method: 'BF' or 'SP' or  'SBSBF'
+    N: number of decoding iterations
+    p: probability of success
+    output: the number of errors the decoding method can correct using H
+    '''
     r, n = H.shape
     d = r // 2
     t = 0
@@ -661,12 +714,14 @@ def decodeMax(H, G, method, N, p):
         t += 1
 ########################## Step-By-Step Bit-Flipping Decoder ##########################
 
-# input: parity-check matrix H, syndrome s, threshold T, method:
-# method 1: random select an unsatisfied eqn, then select a nonzero bit of that eqn
-# method 2: random selection amongst j where sigma_j >= T
-# method 3: return argmax_j sigma_j
-# output: a bit j such that sigma_j >= T, else return 'F'
 def sampling(H, s, T, method):
+    '''
+    input: parity-check matrix H, syndrome s, threshold T, method:
+    method 1: random select an unsatisfied eqn, then select a nonzero bit of that eqn
+    method 2: random selection amongst j where sigma_j >= T
+    method 3: return argmax_j sigma_j
+    output: a bit j such that sigma_j >= T, else return 'F'
+    '''
     r, n = H.shape
 
     # method 1: random select an unsatisfied eqn, then select a nonzero bit of that eqn
@@ -776,6 +831,8 @@ def SBSBF(H, y, w, t, N, codeword, samp_method):
         return 0
 
 #################### Markov Chain Monte Carlo Simulation Algorithms ####################
+
+# the descriptions of the algorithms here should be self-explanatory after reading the thesis
 
 def XBar(S,t,n,w):
     numer = 0
