@@ -15,7 +15,7 @@ A research on binary QC-MDPC codes for use in the McEliece cryptosystem for my B
 - [ ] Algorithm to assess decoding failure rate (DFR) of a QC-MDPC code
 - [ ] Estimation of decoding failure rate of cryptosystem via a Markov chain.
 
-For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1]. For attacks on the QC-MDPC McEliece cryptosystem, refer to documents [3] and [4]. For modelling of a QC-MDPC McEliece cryptosystem as a time-homogeneous Markov Chain refer to [5] 
+For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1]. For attacks on the QC-MDPC McEliece cryptosystem, refer to documents [3] and [4]. For Markov Chain modelling of the bit-flipping algorithm in the QC-MDPC McEliece cryptosystem refer to [5] 
 
 References (available in this repo):  
 1. A Code-Based Key Agreement Scheme using QC-MDPC Codes  
