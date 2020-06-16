@@ -2,18 +2,17 @@
 # Quasi-Cyclic Moderate Density Parity-Check (QC-MDPC) codes
 
 A research on binary QC-MDPC codes for use in the McEliece cryptosystem for my Bachelor's Thesis at the National University of Singapore, Department of Mathematics.
-<br>  
-**Currently working on**:  
-1. Analysing the Markov Chain detailed in the paper titled "On the Decoding Failure Rate of QC-MDPC" by Nicolas Sendrier and Valentin Vasseur.
-2. Learning how the notion of trapping sets can be used to explain why certain subgraphs of the Tanner graph of a parity-check matrix adversely affects the decoding process.
+
+The thesis consists of two portions, the first part is about using vertex expander graphs to construct deterministic bit-flipping algorithms, the next part is about using Markov Chains to estimate the decoding failure rate of variants of bit-flipping algorithms.
+<br>
 
 **Algorithms available**  
 - [x] Algorithms for matrix operations on circulant matrices
 - [x] Decoding algorithms: Bit-Flipping algorithm, Sum-Product algorithm
 - [x] Algorithms for QC-MDPC McEliece Cryptosystem
 - [x] Algorithm for counting 4 cycles in Tanner graph of a QC-MDPC code
-- [ ] Algorithm to assess decoding failure rate (DFR) of a QC-MDPC code
-- [ ] Estimation of decoding failure rate of cryptosystem via a Markov chain.
+- [x] Algorithm to assess decoding failure rate (DFR) of a QC-MDPC code via Monte Carlo simulation
+- [x] Estimation of decoding failure rate of cryptosystem via a Markov chain.
 
 For the mathematical background of QC-MDPC codes, refer to sections 2 & 3 of [2].  For the mathematical background of circulant matrices, refer to section 2 of the document [1]. For the pseudocode of the bit-flipping algorithm and Sum-Product algorithm, refer to the Appendix, Algorithm 1 and 2 of the document [1]. For the mathematical background of the bit-flipping algorithm and Sum-Product algorithm, refer to section 5 of the document [1]. For attacks on the QC-MDPC McEliece cryptosystem, refer to documents [3] and [4]. For Markov Chain modelling of the bit-flipping algorithm in the QC-MDPC McEliece cryptosystem refer to [5] 
 
