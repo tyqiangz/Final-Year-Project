@@ -24,7 +24,7 @@ References (available in this repo):
 4. A Key Recovery Attack on MDPC with CCA Security Using Decoding Errors
 5. On the Decoding Failure Rate of QC-MDPC
 
-Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever neccesary.  
+Note: I am only working on binary QC-MDPC matrices, hence by default all input vectors and matrices are to be in binary wherever necessary.  
 
 ---  
 **API Specification:**  
